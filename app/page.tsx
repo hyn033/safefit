@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES, SLIDE_EXERCISE_IDS, getGuideImage, matchExercise } from "@/lib/exercises";
+import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES, SLIDE_EXERCISE_IDS, getGuideImage } from "@/lib/exercises";
 import FeedbackResult, { PainNotice } from "@/components/FeedbackResult";
 import { BulbIcon, CameraIcon, ChatIcon, DumbbellIcon, SendIcon } from "@/components/Icons";
 import { toSevereResponse } from "@/lib/feedback";
@@ -15,7 +15,7 @@ import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
 import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
-import { EXERCISE_OTHER_MAX_LENGTH, MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
+import { MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
 import type { FeedbackFieldErrors } from "@/lib/validate";
 
 const subscribeNothing = () => () => {};
@@ -25,14 +25,12 @@ export default function Home() {
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
 
   // 입력창의 글자와, "확인"을 눌러 정해진 운동을 따로 둔다. 확인 전에는 안내 그림을 보여 주지 않는다.
-  const [exerciseText, setExerciseText] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [exerciseId, setExerciseId] = useState<ExerciseId>("squat");
   const [exerciseOther, setExerciseOther] = useState("");
   const [stepsOpen, setStepsOpen] = useState(false);
   // 운동 고르기 슬라이드: 지금 보이는 칸 번호와 직접 입력 칸을 열었는지
   const [slideIndex, setSlideIndex] = useState(0);
-  const [showOther, setShowOther] = useState(false);
   const slideRef = useRef<HTMLDivElement>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -80,8 +78,7 @@ export default function Home() {
   // 입력 검사 → (심한 증상이면 보내지 않고 안내) → 사진 줄이기 → 서버에 요청 → 결과 표시
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!confirmed) confirmExercise();
-    else void sendFeedback(false);
+    if (confirmed) void sendFeedback(false);
   }
 
   /** 슬라이드에서 운동을 눌러 정한다. */
@@ -109,26 +106,11 @@ export default function Home() {
     box.scrollBy({ left: direction * card.offsetWidth, behavior: "smooth" });
   }
 
-  /** 입력한 운동 이름을 확인한다. 목록에 있으면 그 운동, 없으면 '기타'(베타)로 본다. */
-  function confirmExercise() {
-    const name = exerciseText.trim();
-    if (name === "") {
-      setErrors({ exerciseOther: "운동 이름을 입력해 주세요." });
-      return;
-    }
-    const id = matchExercise(name);
-    setExerciseId(id);
-    setExerciseOther(id === "other" ? name : "");
-    setConfirmed(true);
-    clearResult();
-  }
-
   /** "아니요, 운동 다시 고를게요": 사진·메모는 그대로 두고 운동 고르기 화면으로 돌아간다. */
   function handleReselect() {
     setResult(null);
     setConfirmed(false);
     setSlideIndex(0);
-    setShowOther(false);
   }
 
   /** @param exerciseConfirmed 운동·사진 불일치 확인에서 "맞다"고 답한 재요청이면 true */
@@ -259,34 +241,6 @@ export default function Home() {
             <button type="button" onClick={() => moveSlide(1)} aria-label="다음 운동" disabled={slideIndex === SLIDE_EXERCISE_IDS.length - 1}
               className="absolute top-1/3 right-0 size-11 rounded-full bg-background/90 text-xl shadow disabled:hidden">›</button>
           </div>
-
-          {/* 목록에 없는 운동은 작은 글씨로만 둔다. (기타, 베타) */}
-          {!showOther ? (
-            <button type="button" onClick={() => setShowOther(true)} className="min-h-11 text-sm text-foreground/60 underline underline-offset-4">
-              다른 운동 직접 입력
-            </button>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <input
-                id="exercise"
-                type="text"
-                value={exerciseText}
-                onChange={(event) => {
-                  setExerciseText(event.target.value);
-                  setErrors({});
-                }}
-                maxLength={EXERCISE_OTHER_MAX_LENGTH}
-                placeholder="운동 이름 (예: 데드리프트)"
-                aria-label="운동 이름"
-                aria-invalid={errors.exerciseOther ? true : undefined}
-                autoComplete="off"
-                autoFocus
-                className="sf-input"
-              />
-              <FieldError message={errors.exerciseOther} />
-              <button type="submit" className="sf-btn-secondary">확인</button>
-            </div>
-          )}
         </div>
       ) : (
         /* 2단계: 안내 그림을 보고 사진·메모를 입력한다. 카드형이지만 한 화면에 들어가도록 줄여 담는다. */
@@ -300,8 +254,7 @@ export default function Home() {
                 onClick={() => {
                   setConfirmed(false);
                   setSlideIndex(0);
-                  setShowOther(false);
-                  clearResult();
+                                clearResult();
                 }}
                 className="min-h-11 px-1 text-sm font-medium text-accent underline underline-offset-4"
               >
