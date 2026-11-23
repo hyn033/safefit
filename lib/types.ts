@@ -96,8 +96,6 @@ export interface OverlayLine {
   x2: number;
   y2: number;
   kind: "good" | "fix";
-  /** 선 옆에 붙일 짧은 설명 (없을 수 있다) */
-  label?: string;
 }
 
 /** 코드가 항상 붙이는 안내 (AI 답변과 무관하게 표시한다) */

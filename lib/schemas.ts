@@ -77,7 +77,6 @@ const overlayLineSchema = z.object({
   x2: z.number().min(0).max(1),
   y2: z.number().min(0).max(1),
   kind: z.enum(["good", "fix"]),
-  label: z.string().max(30).nullish(),
 });
 
 /**

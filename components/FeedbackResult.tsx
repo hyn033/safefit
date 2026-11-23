@@ -79,19 +79,6 @@ function PhotoOverlay({ photoUrl, lines }: { photoUrl: string; lines: OverlayLin
             />
           ))}
         </svg>
-        {lines.map(
-          (line, index) =>
-            line.label && (
-              <span
-                key={index}
-                aria-hidden="true"
-                style={{ left: `${((line.x1 + line.x2) / 2) * 100}%`, top: `${((line.y1 + line.y2) / 2) * 100}%` }}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-white ${line.kind === "good" ? "bg-green-600" : "bg-orange-600"}`}
-              >
-                {line.label}
-              </span>
-            ),
-        )}
       </div>
       <figcaption className="text-center text-xs text-foreground/70">
         {lines.length > 0 ? (
@@ -103,12 +90,6 @@ function PhotoOverlay({ photoUrl, lines }: { photoUrl: string; lines: OverlayLin
           "내가 올린 사진이에요."
         )}
       </figcaption>
-      {/* 선 정보는 눈으로만 볼 수 있으므로 같은 내용을 글로도 남긴다. */}
-      <ul className="sr-only">
-        {lines.filter((line) => line.label).map((line, index) => (
-          <li key={index}>{line.kind === "good" ? "잘 된 곳" : "고치면 좋은 곳"}: {line.label}</li>
-        ))}
-      </ul>
     </figure>
   );
 }
