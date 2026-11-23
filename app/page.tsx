@@ -1,6 +1,6 @@
 "use client";
 
-// Design Ref: §5.3 홈 화면 — 운동 선택, 운동 안내 카드, 사진, 오늘 메모를 입력받는다. (PLAN 8번)
+// Design Ref: §5.3 홈 화면 — 운동 고르기(버튼 4개), 운동 안내(그림+핵심 두 줄, 하는 법은 펼쳐 보기), 사진, 오늘 메모를 입력받는다. (PLAN 8번, 화면 단순화)
 // 입력 검사(PLAN 9)와 서버 호출·결과 영역(PLAN 12)을 연결했다. 예외 상황(13), 하루 횟수 제한(14), 평가(15)는 이후 작업이다.
 // 사진·메모는 이 화면의 메모리에만 두고 어디에도 저장하지 않는다.
 
@@ -25,7 +25,7 @@ export default function Home() {
 
   const [exerciseId, setExerciseId] = useState<ExerciseId>("squat");
   const [exerciseOther, setExerciseOther] = useState("");
-  const [guideOpen, setGuideOpen] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [memo, setMemo] = useState("");
@@ -158,27 +158,42 @@ export default function Home() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6" hidden={!isClient}>
-      <p className="text-sm text-foreground/70">
-        오늘 남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
-      </p>
-
-      {/* 운동 선택 */}
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5" hidden={!isClient}>
+      {/* 1. 운동 고르기: 네 개 중 하나를 바로 누른다. */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="exercise" className="text-sm font-medium">운동 선택</label>
-        <select
+        <div className="flex items-baseline justify-between">
+          <h2 id="exercise-label" className="text-base font-semibold">어떤 운동인가요?</h2>
+          <p className="text-xs text-foreground/60">
+            오늘 남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
+          </p>
+        </div>
+        <div
           id="exercise"
-          value={exerciseId}
-          onChange={(event) => {
-            setExerciseId(event.target.value as ExerciseId);
-            clearResult();
-          }}
-          className="min-h-11 rounded-lg border border-foreground/15 bg-background px-3 text-base"
+          role="radiogroup"
+          aria-labelledby="exercise-label"
+          tabIndex={-1}
+          className="grid grid-cols-4 gap-2 outline-none"
         >
           {EXERCISE_IDS.map((id) => (
-            <option key={id} value={id}>{EXERCISE_GUIDES[id].name}</option>
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={exerciseId === id}
+              onClick={() => {
+                setExerciseId(id);
+                clearResult();
+              }}
+              className={`min-h-11 rounded-xl border text-sm font-medium ${
+                exerciseId === id
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-foreground/15 bg-background"
+              }`}
+            >
+              {EXERCISE_GUIDES[id].name}
+            </button>
           ))}
-        </select>
+        </div>
         {exerciseId === "other" && (
           <input
             type="text"
@@ -191,28 +206,29 @@ export default function Home() {
             placeholder="운동 이름 (예: 데드리프트)"
             aria-label="운동 이름"
             aria-invalid={errors.exerciseOther ? true : undefined}
-            className="min-h-11 rounded-lg border border-foreground/15 bg-background px-3 text-base"
+            className="min-h-11 rounded-xl border border-foreground/15 bg-background px-3 text-base"
           />
         )}
         <FieldError message={errors.exerciseOther} />
       </div>
 
-      {/* 운동 안내 카드 (접고 펼 수 있음) */}
-      <section className="rounded-xl border border-foreground/15">
+      {/* 운동 안내: 그림과 핵심 두 줄만 먼저 보이고, 하는 법은 눌러서 본다. */}
+      <section aria-label={`운동 안내 ${guide.name}`} className="flex flex-col gap-3 rounded-2xl bg-foreground/[0.04] p-4">
+        {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
+        <img src={guide.imagePath} alt={guide.imageAlt} className="w-full rounded-xl bg-white" />
+        <p className="text-sm"><strong>찍을 순간</strong> · {guide.shootMoment}</p>
+        <p className="text-sm text-foreground/70">{guide.cameraNote}</p>
         <button
           type="button"
           onClick={() => setGuideOpen((open) => !open)}
           aria-expanded={guideOpen}
           aria-controls="guide-body"
-          className="flex min-h-11 w-full items-center justify-between px-4 text-left text-sm font-medium"
+          className="min-h-11 self-start text-sm font-medium underline underline-offset-4"
         >
-          <span>운동 안내 · {guide.name}</span>
-          <span aria-hidden="true">{guideOpen ? "접기 ▲" : "펼치기 ▼"}</span>
+          {guideOpen ? "자세히 접기" : "하는 법 자세히 보기"}
         </button>
         {guideOpen && (
-          <div id="guide-body" className="flex flex-col gap-3 px-4 pb-4 text-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
-            <img src={guide.imagePath} alt={guide.imageAlt} className="w-full rounded-lg" />
+          <div id="guide-body" className="flex flex-col gap-3 text-sm">
             {guide.steps.length > 0 && (
               <ol className="list-decimal space-y-1 pl-5">
                 {guide.steps.map((step) => (
@@ -220,8 +236,6 @@ export default function Home() {
                 ))}
               </ol>
             )}
-            <p><strong>찍을 순간</strong>: {guide.shootMoment}</p>
-            <p><strong>카메라</strong>: {guide.cameraNote}</p>
             <ul className="list-disc space-y-1 pl-5 text-foreground/70">
               {COMMON_GUIDE_NOTES.map((note) => (
                 <li key={note}>{note}</li>
@@ -231,29 +245,39 @@ export default function Home() {
         )}
       </section>
 
-      {/* 사진 */}
+      {/* 2. 사진: 큰 영역을 누르면 촬영하거나 앨범에서 고른다. */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="photo" className="text-sm font-medium">사진 (촬영하거나 앨범에서 선택)</label>
-        <input
-          id="photo"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={handlePhoto}
-          className="min-h-11 text-sm file:mr-3 file:min-h-11 file:rounded-lg file:border-0 file:bg-foreground file:px-4 file:text-background"
-        />
-        {photo && previewUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- 사용자가 고른 사진의 임시 미리보기라 최적화 대상이 아니다
-          <img src={previewUrl} alt="선택한 자세 사진 미리보기" className="max-h-80 w-full rounded-lg object-contain" />
-        )}
+        <h2 className="text-base font-semibold">자세 사진</h2>
+        <label
+          htmlFor="photo"
+          className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-foreground/20 p-3 text-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2"
+        >
+          {photo && previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- 사용자가 고른 사진의 임시 미리보기라 최적화 대상이 아니다
+            <img src={previewUrl} alt="선택한 자세 사진 미리보기" className="max-h-72 w-full rounded-lg object-contain" />
+          ) : (
+            <>
+              <span className="text-base font-medium">사진 찍기 · 앨범에서 고르기</span>
+              <span className="text-xs text-foreground/60">전신이 나오게, 옆모습으로, 얼굴은 가려 주세요</span>
+            </>
+          )}
+          <input
+            id="photo"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handlePhoto}
+            className="sr-only"
+          />
+        </label>
+        {photo && <p className="text-center text-xs text-foreground/60">다른 사진으로 바꾸려면 사진을 다시 누르세요</p>}
         <FieldError message={errors.photo} />
-        <p className="text-xs text-foreground/70">
-          전신이 나오게, 밝은 곳에서, 옆모습으로 찍어 주세요. 얼굴은 가려 주세요.
-        </p>
       </div>
 
-      {/* 오늘 메모 */}
+      {/* 3. 메모 */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="memo" className="text-sm font-medium">오늘 메모 (비워도 돼요)</label>
+        <label htmlFor="memo" className="text-base font-semibold">
+          오늘 메모 <span className="text-sm font-normal text-foreground/60">(선택)</span>
+        </label>
         <textarea
           id="memo"
           value={memo}
@@ -262,18 +286,20 @@ export default function Home() {
             clearResult();
           }}
           maxLength={MEMO_MAX_LENGTH}
-          rows={3}
+          rows={2}
           placeholder="예: 무릎이 아파요"
-          className="rounded-lg border border-foreground/15 bg-background px-3 py-2 text-base"
+          className="rounded-xl border border-foreground/15 bg-background px-3 py-2 text-base"
         />
-        <p className="text-right text-xs text-foreground/60">{memo.length}/{MEMO_MAX_LENGTH}</p>
+        {memo.length > MEMO_MAX_LENGTH - 100 && (
+          <p className="text-right text-xs text-foreground/60">{memo.length}/{MEMO_MAX_LENGTH}</p>
+        )}
         <FieldError message={errors.memo} />
       </div>
 
       <button
         type="submit"
         disabled={checking}
-        className="min-h-12 rounded-lg bg-foreground px-4 text-base font-medium text-background disabled:opacity-40"
+        className="min-h-12 rounded-xl bg-foreground px-4 text-base font-semibold text-background disabled:opacity-40"
       >
         {checking ? "분석 중… (최대 30초)" : "피드백 받기"}
       </button>
