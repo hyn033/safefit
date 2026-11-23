@@ -111,6 +111,8 @@ export interface FeedbackResponse {
   problemParts?: string[];
   /** 내 몸에 맞는 수정 방법 (최대 3개) */
   fixes?: string[];
+  /** 메모에 적은 자세 관련 질문에 대한 AI의 답 (질문이 없으면 없음) */
+  memoAnswer?: string;
   /** "확실하지 않다" 표시 */
   uncertain?: boolean;
   notices: FeedbackNotices;

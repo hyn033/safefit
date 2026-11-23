@@ -40,6 +40,7 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
     differences: answer.differences ?? undefined,
     problemParts: answer.problemParts ?? undefined,
     fixes: answer.fixes ?? undefined,
+    memoAnswer: answer.memoAnswer ?? undefined,
     uncertain: answer.uncertain ?? undefined,
   };
 }

@@ -77,6 +77,7 @@ export const aiAnswerSchema = z
     differences: textList(6, 200),
     problemParts: textList(6, 100),
     fixes: textList(3, 300),
+    memoAnswer: optionalText(600),
     uncertain: z.boolean().nullish(),
   })
   .superRefine((answer, ctx) => {

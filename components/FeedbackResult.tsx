@@ -182,6 +182,12 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
             {result.assessment && <p className="text-base leading-relaxed">{result.assessment}</p>}
           </div>
           <Section title="내 몸에 맞는 수정 방법" items={result.fixes} numbered />
+          {result.memoAnswer && (
+            <section className="flex flex-col gap-2 rounded-2xl bg-accent/10 p-4">
+              <h3 className="text-sm font-semibold">궁금한 점에 대한 답</h3>
+              <p className="text-sm leading-relaxed">{result.memoAnswer}</p>
+            </section>
+          )}
           <Section title="정석과 다른 점" items={result.differences} />
           <Section title="무리가 가는 부분" items={result.problemParts} />
         </>

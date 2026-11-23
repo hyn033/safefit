@@ -375,7 +375,7 @@ export default function Home() {
                 }}
                 maxLength={MEMO_MAX_LENGTH}
                 rows={1}
-                placeholder="예: 무릎이 아파요"
+                placeholder="궁금한 걸 물어보세요"
                 className="sf-input py-2"
               />
               <FieldError message={errors.memo} />
