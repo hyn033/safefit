@@ -75,7 +75,7 @@ export function buildUserText(request: FeedbackRequest): string {
   return [
     `운동: ${exerciseName(request)}`,
     ...guideLines(request),
-    `운동 확인: ${request.exerciseConfirmed ? "사용자가 이 운동이 맞다고 확인함" : "확인 요청 없음"}`,
+    `운동 확인: ${request.exerciseConfirmed ? "사용자가 이 운동이 맞다고 확인함 (status를 mismatch로 답하지 말고, 이 운동으로 분석하거나 자세를 알아볼 수 없으면 retake로 답할 것)" : "확인 요청 없음"}`,
     "몸 정보:",
     `- 운동 경험: ${EXPERIENCE_LABELS[profile.experience]}`,
     `- 부상 이력·불편한 부위: ${injuryText(request)}`,

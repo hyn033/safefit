@@ -97,6 +97,8 @@ export async function requestAiAnswer(request: FeedbackRequest, deadlineAt: numb
   const model = process.env.OPENAI_MODEL?.trim() || DEFAULT_MODEL;
   // 모양은 맞지만 문제 표현이 있는 답변 (재시도가 불가능하거나 실패했을 때 문장을 지워서 쓴다)
   let flawed: AiAnswer | null = null;
+  // 사용자가 운동을 확인했는데도 AI가 불일치로 답한 경우 (Design Ref: §4.4 — 확인된 요청은 불일치 판정을 건너뛴다)
+  let wronglyMismatched: AiAnswer | null = null;
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const remaining = deadlineAt - Date.now();
@@ -106,6 +108,10 @@ export async function requestAiAnswer(request: FeedbackRequest, deadlineAt: numb
     const timeoutMs = attempt === 1 ? Math.min(AI_FIRST_CALL_MS, remaining) : remaining;
     const answer = parseAnswer(await askModel(client, model, request, timeoutMs));
     if (!answer) continue;
+    if (request.exerciseConfirmed && answer.status === "mismatch") {
+      wronglyMismatched = answer;
+      continue;
+    }
     // 다시 촬영·불일치 답변은 분석 내용을 쓰지 않으므로 표현 검사가 필요 없다.
     if (answer.status !== "ok" || !answerHasBannedExpression(answer)) return answer;
     flawed = answer;
@@ -115,5 +121,7 @@ export async function requestAiAnswer(request: FeedbackRequest, deadlineAt: numb
     const cleaned = removeBannedExpressions(flawed);
     if (!isInsufficient(cleaned)) return cleaned;
   }
+  // 확인된 운동인데 계속 불일치로 답하면 사진으로 자세를 확인하기 어려운 것이므로 "다시 촬영"으로 안내한다.
+  if (wronglyMismatched) return { ...wronglyMismatched, status: "retake" };
   throw new FeedbackApiError("AI_FAILED");
 }
