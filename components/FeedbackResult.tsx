@@ -94,8 +94,14 @@ function PhotoOverlay({ photoUrl, lines }: { photoUrl: string; lines: OverlayLin
         )}
       </div>
       <figcaption className="text-center text-xs text-foreground/70">
-        <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 잘 된 곳,{" "}
-        <span className="font-semibold text-orange-700 dark:text-orange-400">주황</span>은 고치면 좋은 곳이에요. AI가 대략 표시한 거라 위치가 어긋날 수 있어요.
+        {lines.length > 0 ? (
+          <>
+            <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 잘 된 곳,{" "}
+            <span className="font-semibold text-orange-700 dark:text-orange-400">주황</span>은 고치면 좋은 곳이에요. AI가 대략 표시한 거라 위치가 어긋날 수 있어요.
+          </>
+        ) : (
+          "내가 올린 사진이에요."
+        )}
       </figcaption>
       {/* 선 정보는 눈으로만 볼 수 있으므로 같은 내용을 글로도 남긴다. */}
       <ul className="sr-only">
@@ -221,7 +227,8 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
 
       {result.status === "ok" && (
         <>
-          {photoUrl && result.overlay && result.overlay.length > 0 && <PhotoOverlay photoUrl={photoUrl} lines={result.overlay} />}
+          {/* 사진은 선이 없어도 항상 보여 준다. */}
+          {photoUrl && <PhotoOverlay photoUrl={photoUrl} lines={result.overlay ?? []} />}
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               {result.verdict && (
