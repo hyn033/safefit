@@ -1,14 +1,31 @@
 // Design Ref: §3, §4.4 — AI 답변과 코드가 붙이는 안내를 합쳐 화면에 줄 피드백 결과를 만든다.
-// 통증·심한 증상·부상 부위 주의 같은 안전 안내는 PLAN 11번(lib/safety.ts)에서 이어서 붙인다.
+// 통증·심한 증상·부상 부위 주의 같은 안전 안내는 AI 답변과 무관하게 lib/safety.ts의 규칙으로 코드가 붙인다. (PLAN 11번)
 
+import { detectPain, detectSevere, getInjuryParts } from "./safety";
 import type { AiAnswer } from "./schemas";
-import type { FeedbackRequest, FeedbackResponse } from "./types";
+import type { FeedbackNotices, FeedbackRequest, FeedbackResponse } from "./types";
+
+/** 코드가 항상 붙이는 안내. AI 주의·의료 아님은 항상, 통증·심한 증상·부상 부위는 해당할 때만 붙인다. */
+function buildNotices(request: FeedbackRequest): FeedbackNotices {
+  const notices: FeedbackNotices = { aiCaution: true, notMedical: true };
+  const severe = detectSevere(request.memo);
+  // 심한 증상 표현에는 통증 표현도 함께 있는 것으로 보고 통증 안내도 붙인다.
+  if (severe || detectPain(request.memo)) notices.pain = true;
+  if (severe) notices.severe = true;
+  const injuryParts = getInjuryParts(request.exerciseId, request.profile);
+  if (injuryParts) notices.injuryParts = injuryParts;
+  return notices;
+}
+
+/** 심한 증상일 때의 결과: AI를 부르지 않고 안내만 담는다. 자세 피드백은 없다. */
+export function toSevereResponse(request: FeedbackRequest): FeedbackResponse {
+  return { status: "severe", notices: buildNotices(request), beta: request.exerciseId === "other" };
+}
 
 export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): FeedbackResponse {
   const base = {
     status: answer.status,
-    // AI 분석 주의 문구와 "의료 진단 아님" 문구는 AI 답변과 무관하게 항상 붙인다.
-    notices: { aiCaution: true, notMedical: true } as const,
+    notices: buildNotices(request),
     // 목록에 없는 '기타' 운동은 안내 카드가 없으므로 베타로 표시한다.
     beta: request.exerciseId === "other",
   };

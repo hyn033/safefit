@@ -3,7 +3,8 @@
 // 사진은 서버에 저장하지 않고, 로그에도 남기지 않는다. API 키는 서버에서만 읽는다. (Design Ref: §7)
 
 import { FeedbackApiError, requestAiAnswer, SERVER_DEADLINE_MS } from "@/lib/ai";
-import { toFeedbackResponse } from "@/lib/feedback";
+import { toFeedbackResponse, toSevereResponse } from "@/lib/feedback";
+import { detectSevere } from "@/lib/safety";
 import { feedbackRequestSchema } from "@/lib/schemas";
 import { API_ERROR_CODES } from "@/lib/types";
 import type { ApiErrorCode, ApiErrorResponse } from "@/lib/types";
@@ -50,6 +51,9 @@ export async function POST(request: Request): Promise<Response> {
 
     const parsed = feedbackRequestSchema.safeParse(json);
     if (!parsed.success) return errorResponse("INVALID_INPUT");
+
+    // 심한 증상 표현이 있으면(직접 호출 대비) AI를 부르지 않고 안내만 돌려준다.
+    if (detectSevere(parsed.data.memo)) return Response.json(toSevereResponse(parsed.data));
 
     const answer = await requestAiAnswer(parsed.data, deadlineAt);
     return Response.json(toFeedbackResponse(parsed.data, answer));

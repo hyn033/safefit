@@ -4,6 +4,7 @@
 
 import OpenAI, { APIConnectionTimeoutError, APIError } from "openai";
 import { buildUserText, SYSTEM_PROMPT } from "./prompt";
+import { answerHasBannedExpression, removeBannedExpressions } from "./safety";
 import { aiAnswerSchema } from "./schemas";
 import type { AiAnswer } from "./schemas";
 import type { ApiErrorCode, FeedbackRequest } from "./types";
@@ -77,9 +78,15 @@ function parseAnswer(text: string | null): AiAnswer | null {
   }
 }
 
+/** 정상(ok) 답변인데 요약이나 수정 방법이 비어 있으면 화면에 보여 줄 내용이 부족한 것이다. */
+function isInsufficient(answer: AiAnswer): boolean {
+  return answer.status === "ok" && (!answer.assessment || !answer.fixes || answer.fixes.length === 0);
+}
+
 /**
  * AI에게 자세를 물어 약속한 모양의 답변을 받는다.
- * 답변 모양이 어긋나면 남은 시간이 충분할 때만 1회 다시 묻는다. (Design Ref: §4.3)
+ * 답변 모양이 어긋나거나 진단·체중 비난 표현이 있으면 남은 시간이 충분할 때만 1회 다시 묻는다. (Design Ref: §4.3, §4.4)
+ * 다시 물은 뒤에도 문제 표현이 남으면 그 문장을 지우고, 남은 내용이 부족하면 AI_FAILED로 처리한다.
  * @param deadlineAt 서버 전체 마감 시각 (Date.now() 기준 밀리초)
  */
 export async function requestAiAnswer(request: FeedbackRequest, deadlineAt: number): Promise<AiAnswer> {
@@ -88,6 +95,8 @@ export async function requestAiAnswer(request: FeedbackRequest, deadlineAt: numb
 
   const client = new OpenAI({ apiKey, maxRetries: 0 });
   const model = process.env.OPENAI_MODEL?.trim() || DEFAULT_MODEL;
+  // 모양은 맞지만 문제 표현이 있는 답변 (재시도가 불가능하거나 실패했을 때 문장을 지워서 쓴다)
+  let flawed: AiAnswer | null = null;
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const remaining = deadlineAt - Date.now();
@@ -96,8 +105,15 @@ export async function requestAiAnswer(request: FeedbackRequest, deadlineAt: numb
 
     const timeoutMs = attempt === 1 ? Math.min(AI_FIRST_CALL_MS, remaining) : remaining;
     const answer = parseAnswer(await askModel(client, model, request, timeoutMs));
-    if (answer) return answer;
+    if (!answer) continue;
+    // 다시 촬영·불일치 답변은 분석 내용을 쓰지 않으므로 표현 검사가 필요 없다.
+    if (answer.status !== "ok" || !answerHasBannedExpression(answer)) return answer;
+    flawed = answer;
   }
 
+  if (flawed) {
+    const cleaned = removeBannedExpressions(flawed);
+    if (!isInsufficient(cleaned)) return cleaned;
+  }
   throw new FeedbackApiError("AI_FAILED");
 }
