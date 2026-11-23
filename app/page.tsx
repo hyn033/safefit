@@ -113,6 +113,19 @@ export default function Home() {
     setSlideIndex(0);
   }
 
+  /** "나가기": 사진·메모·결과를 모두 비우고 운동 고르기 첫 화면으로 돌아간다. (저장된 동의·몸 정보는 그대로) */
+  function handleLeave() {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    previewRef.current = null;
+    setPhoto(null);
+    setPreviewUrl(null);
+    setMemo("");
+    setExerciseOther("");
+    clearResult();
+    setConfirmed(false);
+    setSlideIndex(0);
+  }
+
   /** @param exerciseConfirmed 운동·사진 불일치 확인에서 "맞다"고 답한 재요청이면 true */
   async function sendFeedback(exerciseConfirmed: boolean) {
     if (checking) return;
@@ -191,11 +204,18 @@ export default function Home() {
       {result ? (
         /* 결과 화면: 입력 화면을 대신한다. 입력한 사진·메모는 그대로 남아 있어 "다시 촬영"으로 돌아갈 수 있다. */
         <>
-          {result.status !== "mismatch" && (
-            <button type="button" onClick={() => setResult(null)} className="sf-btn-secondary self-start">
-              ← 다시 촬영하기
+          <div className="flex items-center justify-between gap-2">
+            {result.status !== "mismatch" ? (
+              <button type="button" onClick={() => setResult(null)} className="sf-btn-secondary">
+                ← 다시 촬영하기
+              </button>
+            ) : (
+              <span />
+            )}
+            <button type="button" onClick={handleLeave} className="sf-btn-secondary">
+              나가기
             </button>
-          )}
+          </div>
           <FeedbackResult
             result={result}
             guide={guide}
@@ -262,9 +282,14 @@ export default function Home() {
                 바꾸기
               </button>
             </div>
-            <p className="text-xs text-foreground/60">
-              남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-foreground/60">
+                남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
+              </p>
+              <button type="button" onClick={handleLeave} className="min-h-11 px-1 text-sm font-medium text-foreground/70 underline underline-offset-4">
+                나가기
+              </button>
+            </div>
           </div>
 
           <section aria-label={`운동 안내 ${guide.name}`} className="sf-card flex flex-col gap-1 p-3">
