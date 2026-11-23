@@ -10,7 +10,7 @@ import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES } from "@/lib/exercises";
 import FeedbackResult, { PainNotice } from "@/components/FeedbackResult";
 import { toSevereResponse } from "@/lib/feedback";
 import { detectPain, detectSevere } from "@/lib/safety";
-import { DAILY_LIMIT, getProfile, getUsage } from "@/lib/storage";
+import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
 import { EXERCISE_IDS } from "@/lib/types";
 import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
@@ -35,6 +35,9 @@ export default function Home() {
   const [requestError, setRequestError] = useState<string | null>(null);
   // 마지막으로 보낸 요청이 "운동 확인" 재요청이었는지 (다시 시도할 때 그대로 따른다)
   const lastConfirmedRef = useRef(false);
+  // 오늘 사용 횟수가 바뀌면 남은 횟수 표시를 다시 그리기 위한 값
+  const [usageCount, setUsageCount] = useState<number | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
 
   // 미리보기 주소는 사진을 고를 때 만들고, 바꾸거나 화면을 떠날 때 해제한다.
   const previewRef = useRef<string | null>(null);
@@ -45,7 +48,7 @@ export default function Home() {
   }, []);
 
   const guide = EXERCISE_GUIDES[exerciseId];
-  const remaining = isClient ? Math.max(0, DAILY_LIMIT - getUsage().count) : DAILY_LIMIT;
+  const remaining = isClient ? Math.max(0, DAILY_LIMIT - (usageCount ?? getUsage().count)) : DAILY_LIMIT;
 
   function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -62,6 +65,7 @@ export default function Home() {
     setErrors({});
     setResult(null);
     setRequestError(null);
+    setLimitReached(false);
   }
 
   // 입력 검사 → (심한 증상이면 보내지 않고 안내) → 사진 줄이기 → 서버에 요청 → 결과 표시
@@ -90,6 +94,7 @@ export default function Home() {
     });
     setResult(null);
     setRequestError(null);
+    setLimitReached(false);
     if (Object.keys(found).length > 0 || !photo) {
       setErrors(found);
       return;
@@ -115,9 +120,18 @@ export default function Home() {
       return;
     }
 
+    // 하루 10회를 넘으면 요청을 보내지 않는다. (심한 증상 안내는 위에서 먼저 보여 주므로 횟수와 무관하다.)
+    if (getUsage().count >= DAILY_LIMIT) {
+      setLimitReached(true);
+      return;
+    }
+
     setChecking(true);
     try {
-      const request: FeedbackRequest = { ...base, imageDataUrl: await prepareImage(photo) };
+      const imageDataUrl = await prepareImage(photo);
+      // 요청을 보내는 순간 1회로 센다. 성공·실패와 무관하다. (사진 오류·입력 누락처럼 보내기 전에 막은 경우는 세지 않는다.)
+      setUsageCount(incrementUsage().count);
+      const request: FeedbackRequest = { ...base, imageDataUrl };
       const response = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -263,6 +277,14 @@ export default function Home() {
       >
         {checking ? "분석 중… (최대 30초)" : "피드백 받기"}
       </button>
+      {limitReached && (
+        <div className="-mt-2 flex flex-col gap-3">
+          <p role="alert" className="text-sm font-medium">
+            오늘은 {DAILY_LIMIT}회를 모두 사용했어요. 내일 다시 이용해 주세요.
+          </p>
+          {detectPain(memo) && <PainNotice />}
+        </div>
+      )}
       {requestError && (
         <div className="-mt-2 flex flex-col gap-3">
           <p role="alert" className="text-sm text-red-700 dark:text-red-400">

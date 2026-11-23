@@ -149,7 +149,7 @@ export function getUsage(now: Date = new Date()): UsageRecord {
   return { date: today, count: 0 };
 }
 
-/** 사용 횟수를 1 늘려 저장하고, 늘어난 기록을 돌려준다. (센 시점 규칙은 PLAN 14번에서 적용) */
+/** 사용 횟수를 1 늘려 저장하고, 늘어난 기록을 돌려준다. (센 시점은 홈 화면이 정한다: 요청을 보내는 순간 1회) */
 export function incrementUsage(now: Date = new Date()): UsageRecord {
   const current = getUsage(now);
   const next: UsageRecord = { date: current.date, count: current.count + 1 };
