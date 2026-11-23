@@ -6,6 +6,7 @@
 
 import { EXPERIENCE_LEVELS, INJURY_PARTS } from "./types";
 import type { ConsentRecord, Profile, UsageRecord } from "./types";
+import { INJURY_OTHER_MAX_LENGTH } from "./validate";
 
 /** 한 기기(브라우저)에서 하루에 요청할 수 있는 피드백 횟수 */
 export const DAILY_LIMIT = 10;
@@ -100,6 +101,8 @@ function isProfile(value: unknown): value is Profile {
     return false;
   }
   if (value.injuryOther !== undefined && typeof value.injuryOther !== "string") return false;
+  // 예전에 너무 길게 저장된 값은 서버가 거절하므로, 몸 정보가 없는 것으로 보고 다시 입력받는다.
+  if (typeof value.injuryOther === "string" && value.injuryOther.trim().length > INJURY_OTHER_MAX_LENGTH) return false;
   return typeof value.weightKg === "number" && Number.isFinite(value.weightKg);
 }
 

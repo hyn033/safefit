@@ -11,7 +11,7 @@ import { INJURY_LABELS } from "@/lib/labels";
 import { getProfile, saveProfile } from "@/lib/storage";
 import { INJURY_PARTS } from "@/lib/types";
 import type { Experience, InjuryPart, Profile } from "@/lib/types";
-import { WEIGHT_MAX_KG, WEIGHT_MIN_KG, validateProfileForm } from "@/lib/validate";
+import { INJURY_OTHER_MAX_LENGTH, WEIGHT_MAX_KG, WEIGHT_MIN_KG, validateProfileForm } from "@/lib/validate";
 import type { ProfileFieldErrors, ProfileFormValues } from "@/lib/validate";
 
 const EXPERIENCE_OPTIONS: { value: Experience; label: string }[] = [
@@ -154,6 +154,7 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
               type="text"
               value={values.injuryOther}
               onChange={(event) => update({ injuryOther: event.target.value })}
+              maxLength={INJURY_OTHER_MAX_LENGTH}
               placeholder="예: 고관절"
               aria-invalid={errors.injuryOther ? true : undefined}
               aria-describedby={errors.injuryOther ? "injury-other-error" : undefined}

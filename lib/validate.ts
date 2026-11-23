@@ -6,6 +6,8 @@ import type { Experience, ExerciseId, InjuryPart, Profile } from "./types";
 /** 체중 허용 범위 (kg, 초안) */
 export const WEIGHT_MIN_KG = 20;
 export const WEIGHT_MAX_KG = 300;
+/** 기타 부위 글자 수 상한 (서버 요청 검사 lib/schemas.ts와 같은 값) */
+export const INJURY_OTHER_MAX_LENGTH = 50;
 
 /** 몸 정보 입력 화면의 입력값 (아직 검사하지 않은 상태) */
 export interface ProfileFormValues {
@@ -50,6 +52,8 @@ export function validateProfileForm(values: ProfileFormValues): ProfileFormResul
   const injuryOther = values.injuryOther.trim();
   if (values.injuries.includes("other") && injuryOther === "") {
     errors.injuryOther = "기타 부위를 입력해 주세요.";
+  } else if (injuryOther.length > INJURY_OTHER_MAX_LENGTH) {
+    errors.injuryOther = `기타 부위는 ${INJURY_OTHER_MAX_LENGTH}자 이내로 입력해 주세요.`;
   }
 
   const weightText = values.weight.trim();
