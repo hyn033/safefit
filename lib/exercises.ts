@@ -1,6 +1,8 @@
 // Design Ref: §4.6 — 운동 안내 데이터. AI가 매번 만들지 않고 미리 정해 둔 고정 내용을 쓴다.
 // 주의: 문구와 카메라 수치는 초안이며 전문가 확인이 필요하다. (PLAN 7번)
-// 예시 이미지를 실제 사진으로 바꿀 때는 imagePath만 고치면 된다.
+// 예시 사진 3장(squat·lunge·plank)은 공개 데이터 free-exercise-db(Unlicense, 퍼블릭 도메인)에서 받아
+// public/guide/에 저장해 둔 것이다. 실행 중에 외부 API를 부르지 않는다. 바꿀 때는 imagePath만 고치면 된다.
+// 스쿼트 사진은 정면에서 찍은 것이라, 카메라 위치(옆모습)는 cameraNote 글로 따로 안내한다.
 
 import type { ExerciseId } from "./types";
 
@@ -37,8 +39,8 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     ],
     shootMoment: "가장 깊이 앉은 순간",
     cameraNote: "옆에서 전신이 보이게, 폰을 허리 높이에 두고 2~3m 떨어져서 찍어요.",
-    imagePath: "/guide/squat.svg",
-    imageAlt: "옆에서 본 스쿼트 자세와 허리 높이에 놓은 카메라 위치를 그린 그림",
+    imagePath: "/guide/squat.jpg",
+    imageAlt: "가장 깊이 앉은 스쿼트 자세 예시 사진",
   },
   lunge: {
     id: "lunge",
@@ -51,8 +53,8 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     ],
     shootMoment: "앞무릎이 가장 많이 굽혀진 순간",
     cameraNote: "옆에서 전신이 보이게, 폰을 허리 높이에 두고 2~3m 떨어져서 찍어요.",
-    imagePath: "/guide/lunge.svg",
-    imageAlt: "옆에서 본 런지 자세와 허리 높이에 놓은 카메라 위치를 그린 그림",
+    imagePath: "/guide/lunge.jpg",
+    imageAlt: "앞무릎을 굽힌 런지 자세 예시 사진",
   },
   plank: {
     id: "plank",
@@ -65,8 +67,8 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     ],
     shootMoment: "자세를 잡고 버티는 중간",
     cameraNote: "옆에서 전신이 보이게, 폰을 몸 높이 가까이 두고 2~3m 떨어져서 찍어요.",
-    imagePath: "/guide/plank.svg",
-    imageAlt: "옆에서 본 플랭크 자세와 바닥 가까이 놓은 카메라 위치를 그린 그림",
+    imagePath: "/guide/plank.jpg",
+    imageAlt: "옆에서 본 플랭크 자세 예시 사진",
   },
   other: {
     id: "other",
