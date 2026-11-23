@@ -1,6 +1,6 @@
 "use client";
 
-// Design Ref: §5.3 몸 정보 화면 — 운동 경험, 부상 이력·불편한 부위, 체중을 입력받아 브라우저에만 저장한다. (PLAN 5번)
+// Design Ref: §5.3 몸 정보 화면 — 성별, 부상 이력·불편한 부위, 키·체중을 입력받아 브라우저에만 저장한다. (PLAN 5번)
 // 몸 정보가 없을 때는 처음 입력하는 화면, 이미 있을 때는 고쳐 쓰는(수정) 화면이 된다.
 // Design Ref: §3.1 — 입력 검사 규칙은 lib/validate.ts를 쓴다.
 
@@ -10,24 +10,17 @@ import { useRouter } from "next/navigation";
 import { GENDER_LABELS, INJURY_LABELS } from "@/lib/labels";
 import { getProfile, saveProfile } from "@/lib/storage";
 import { GENDERS, INJURY_PARTS } from "@/lib/types";
-import type { Experience, InjuryPart, Profile } from "@/lib/types";
+import type { InjuryPart, Profile } from "@/lib/types";
 import { INJURY_OTHER_MAX_LENGTH, validateProfileForm } from "@/lib/validate";
 import type { ProfileFieldErrors, ProfileFormValues } from "@/lib/validate";
-
-const EXPERIENCE_OPTIONS: { value: Experience; label: string }[] = [
-  { value: "beginner", label: "처음" },
-  { value: "under1y", label: "1년 미만" },
-  { value: "over1y", label: "1년 이상" },
-];
 
 /** 저장된 몸 정보를 입력칸 값으로 바꾼다. 없으면 빈 입력칸 */
 function toFormValues(profile: Profile | null): ProfileFormValues {
   if (!profile) {
-    return { gender: "", experience: "", noInjury: false, injuries: [], injuryOther: "", height: "", weight: "" };
+    return { gender: "", noInjury: false, injuries: [], injuryOther: "", height: "", weight: "" };
   }
   return {
     gender: profile.gender ?? "",
-    experience: profile.experience,
     noInjury: profile.noInjury,
     injuries: profile.injuries,
     injuryOther: profile.injuryOther ?? "",
@@ -124,26 +117,6 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
           ))}
         </div>
         <FieldError id="gender-error" message={errors.gender} />
-      </fieldset>
-
-      {/* 운동 경험: 3칸 중 하나 */}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="sf-h2 mb-2">운동 경험</legend>
-        <div role="radiogroup" aria-label="운동 경험" className="grid grid-cols-3 gap-2">
-          {EXPERIENCE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={values.experience === option.value}
-              onClick={() => update({ experience: option.value })}
-              className="sf-chip px-2"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <FieldError id="experience-error" message={errors.experience} />
       </fieldset>
 
       {/* 부상·불편한 부위: 여러 개 고르기 ("없음"은 다른 부위와 함께 고를 수 없다) */}

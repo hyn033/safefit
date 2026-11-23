@@ -1,7 +1,7 @@
 // Design Ref: §3.1 — 입력 검사 규칙. 브라우저와 서버가 같은 규칙을 쓰도록 순수 함수로 만든다.
 // 몸 정보 검사(PLAN 5번)와 피드백 요청 입력 검사(PLAN 9번)가 들어 있다.
 
-import type { Experience, ExerciseId, Gender, InjuryPart, Profile } from "./types";
+import type { ExerciseId, Gender, InjuryPart, Profile } from "./types";
 
 /** 체중 허용 범위 (kg, 초안) */
 export const WEIGHT_MIN_KG = 20;
@@ -16,8 +16,6 @@ export const INJURY_OTHER_MAX_LENGTH = 50;
 export interface ProfileFormValues {
   /** 고르기 전에는 빈 문자열 */
   gender: Gender | "";
-  /** 고르기 전에는 빈 문자열 */
-  experience: Experience | "";
   /** "없음"을 고른 경우 true */
   noInjury: boolean;
   injuries: InjuryPart[];
@@ -27,7 +25,7 @@ export interface ProfileFormValues {
   weight: string;
 }
 
-export type ProfileFieldName = "gender" | "experience" | "injuries" | "injuryOther" | "height" | "weight";
+export type ProfileFieldName = "gender" | "injuries" | "injuryOther" | "height" | "weight";
 export type ProfileFieldErrors = Partial<Record<ProfileFieldName, string>>;
 
 export type ProfileFormResult =
@@ -38,17 +36,12 @@ export type ProfileFormResult =
  * 몸 정보 입력값을 검사한다. (Design Ref: §3.1)
  * - 부상 이력: "없음"이면 부위가 비어 있어야 하고, 아니면 1개 이상 골라야 한다. "기타"를 고르면 직접 입력이 필수
  * - 체중: 20~300 사이 숫자
- * - 운동 경험: 필수
  */
 export function validateProfileForm(values: ProfileFormValues): ProfileFormResult {
   const errors: ProfileFieldErrors = {};
 
   if (values.gender === "") {
     errors.gender = "성별을 골라 주세요.";
-  }
-
-  if (values.experience === "") {
-    errors.experience = "운동 경험을 골라 주세요.";
   }
 
   if (values.noInjury) {
@@ -78,14 +71,13 @@ export function validateProfileForm(values: ProfileFormValues): ProfileFormResul
     errors.weight = `체중을 ${WEIGHT_MIN_KG}~${WEIGHT_MAX_KG}kg 사이 숫자로 입력해 주세요.`;
   }
 
-  if (Object.keys(errors).length > 0 || values.experience === "" || values.gender === "") {
+  if (Object.keys(errors).length > 0 || values.gender === "") {
     return { ok: false, errors };
   }
 
   const injuries = values.noInjury ? [] : values.injuries;
   const profile: Profile = {
     gender: values.gender,
-    experience: values.experience,
     noInjury: values.noInjury,
     injuries,
     heightCm,

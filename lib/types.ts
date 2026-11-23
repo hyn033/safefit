@@ -5,12 +5,9 @@
 // 선택지 목록 (화면의 선택 칸과 타입이 같은 목록을 쓰도록 한곳에 둔다)
 // ─────────────────────────────────────────────
 
-/** 운동 경험: 처음 / 1년 미만 / 1년 이상 */
+/** 성별 */
 export const GENDERS = ["male", "female"] as const;
 export type Gender = (typeof GENDERS)[number];
-
-export const EXPERIENCE_LEVELS = ["beginner", "under1y", "over1y"] as const;
-export type Experience = (typeof EXPERIENCE_LEVELS)[number];
 
 /** 부상 이력·불편한 부위: 무릎, 허리, 어깨, 발목, 손목, 목, 기타 */
 export const INJURY_PARTS = [
@@ -36,7 +33,6 @@ export type ExerciseId = (typeof EXERCISE_IDS)[number];
 export interface Profile {
   /** 성별. 운동 안내 그림을 고르고 AI에게 참고로 알린다. (예전에 저장된 몸 정보에는 없을 수 있다) */
   gender?: Gender;
-  experience: Experience;
   /** "없음"을 고른 경우 true. 이때 injuries는 빈 배열이어야 한다. */
   noInjury: boolean;
   injuries: InjuryPart[];
