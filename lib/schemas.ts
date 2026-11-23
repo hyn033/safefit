@@ -81,7 +81,7 @@ const overlayLineSchema = z.object({
 
 /**
  * 선 목록. 모양이 틀린 선은 답변 전체를 실패시키지 않고 그 선만 버린다. (선은 덤이라 없어도 피드백은 보여 줄 수 있다)
- * 최대 4개까지만 쓴다.
+ * 최대 6개까지만 쓴다.
  */
 const overlaySchema = z
   .array(z.unknown())
@@ -90,7 +90,7 @@ const overlaySchema = z
     (items ?? [])
       .map((item) => overlayLineSchema.safeParse(item))
       .flatMap((parsed) => (parsed.success && (parsed.data.x1 !== parsed.data.x2 || parsed.data.y1 !== parsed.data.y2) ? [parsed.data] : []))
-      .slice(0, 4),
+      .slice(0, 6),
   );
 
 export const aiAnswerSchema = z

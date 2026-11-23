@@ -88,7 +88,7 @@ export type Verdict = "similar" | "slight" | "large";
 
 /**
  * 사진 위에 그려 줄 선 하나. 좌표는 사진 전체를 0~1로 본 비율이다. (왼쪽 위가 0,0)
- * good = 잘 된 기준선(초록), fix = 고치면 좋은 부분(주황)
+ * good = 정석과 일치(초록), fix = 정석과 불일치(빨강)
  */
 export interface OverlayLine {
   x1: number;
@@ -129,7 +129,7 @@ export interface FeedbackResponse {
   fixes?: string[];
   /** 메모에 적은 자세 관련 질문에 대한 AI의 답 (질문이 없으면 없음) */
   memoAnswer?: string;
-  /** 사진 위에 그려 줄 선 (최대 4개, AI가 대략 짚은 위치라 정확하지 않을 수 있다) */
+  /** 사진 위에 그려 줄 선 (최대 6개, 몸 마디를 따라 긋는다. 정석과 같으면 초록, 다르면 빨강. AI가 대략 짚은 위치라 정확하지 않을 수 있다) */
   overlay?: OverlayLine[];
   /** "확실하지 않다" 표시 */
   uncertain?: boolean;

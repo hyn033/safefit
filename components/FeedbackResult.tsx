@@ -71,10 +71,9 @@ function PhotoOverlay({ photoUrl, lines }: { photoUrl: string; lines: OverlayLin
               y1={line.y1}
               x2={line.x2}
               y2={line.y2}
-              stroke={line.kind === "good" ? "#22c55e" : "#f97316"}
+              stroke={line.kind === "good" ? "#22c55e" : "#ef4444"}
               strokeWidth={4}
               strokeLinecap="round"
-              strokeDasharray={line.kind === "good" ? undefined : "0.001 0.03"}
               vectorEffect="non-scaling-stroke"
             />
           ))}
@@ -83,8 +82,8 @@ function PhotoOverlay({ photoUrl, lines }: { photoUrl: string; lines: OverlayLin
       <figcaption className="text-center text-xs text-foreground/70">
         {lines.length > 0 ? (
           <>
-            <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 잘 된 곳,{" "}
-            <span className="font-semibold text-orange-700 dark:text-orange-400">주황</span>은 고치면 좋은 곳이에요. AI가 대략 표시한 거라 위치가 어긋날 수 있어요.
+            <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 정석과 같은 곳,{" "}
+            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 정석과 다른 곳이에요. AI가 대략 표시한 거라 위치가 어긋날 수 있어요.
           </>
         ) : (
           "내가 올린 사진이에요."
