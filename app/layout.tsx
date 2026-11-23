@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AccessGate from "@/components/AccessGate";
+import AppFooter from "@/components/AppFooter";
+import Logo from "@/components/Logo";
 import ProfileEditLink from "@/components/ProfileEditLink";
 
 const geistSans = Geist({
@@ -35,23 +37,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-foreground/5">
-        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col border-x border-foreground/10 bg-background">
-          <header className="sticky top-0 z-10 flex h-12 items-center border-b border-foreground/10 bg-background px-4">
-            <span className="text-base font-bold text-accent">세이프핏</span>
+        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
+          <header className="sticky top-0 z-10 flex h-16 items-center gap-2 bg-background px-4">
+            <Logo size={40} />
+            <div className="flex flex-col leading-tight">
+              <span className="text-xl font-bold">세이프핏</span>
+              <span className="text-sm text-foreground/60">SafeFit</span>
+            </div>
             <ProfileEditLink />
           </header>
 
-          <main className="flex-1 px-4 pt-2 pb-14">
+          <main className="flex-1 px-4 pt-2 pb-28">
             {/* Design Ref: §5.1 — 동의가 없으면 /consent로, 몸 정보가 없으면 /profile로 보낸다. */}
             <AccessGate>{children}</AccessGate>
           </main>
 
-          <footer
-            aria-label="안내"
-            className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md border-t border-foreground/10 bg-background px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-center text-xs text-foreground/70"
-          >
-            참고용 자세 안내이며 의료 진단이 아닙니다
-          </footer>
+          <AppFooter />
         </div>
       </body>
     </html>

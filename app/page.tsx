@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES, SLIDE_EXERCISE_IDS, matchExercise } from "@/lib/exercises";
 import FeedbackResult, { PainNotice } from "@/components/FeedbackResult";
+import { BulbIcon, CameraIcon, ChatIcon, ChevronRightIcon, DumbbellIcon, SendIcon } from "@/components/Icons";
 import { toSevereResponse } from "@/lib/feedback";
 import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
@@ -25,7 +26,7 @@ export default function Home() {
 
   // 입력창의 글자와, "확인"을 눌러 정해진 운동을 따로 둔다. 확인 전에는 안내 그림을 보여 주지 않는다.
   const [exerciseText, setExerciseText] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed] = useState(true);
   const [exerciseId, setExerciseId] = useState<ExerciseId>("squat");
   const [exerciseOther, setExerciseOther] = useState("");
   const [stepsOpen, setStepsOpen] = useState(false);
@@ -222,7 +223,10 @@ export default function Home() {
         </>
       ) : !confirmed ? (
         /* 1단계: 큰 운동 카드 하나를 옆으로 넘겨 보고, 누르면 그 운동으로 정한다. */
-        <div className="flex flex-col gap-5 pt-6">
+        <div className="flex flex-col gap-5 pt-2">
+          <button type="button" onClick={() => setConfirmed(true)} className="sf-btn-secondary self-start">
+            ← 돌아가기
+          </button>
           <h1 className="sf-title">어떤 운동을 할까요?</h1>
           <div className="relative">
             <div
@@ -282,37 +286,57 @@ export default function Home() {
           )}
         </div>
       ) : (
-        /* 2단계: 안내 그림을 보고 사진·메모를 입력. 한 화면에 들어가도록 줄여 담는다. */
+        /* 홈: 안내 배너 → 오늘의 운동 → 자세 사진·메모 → 피드백 요청 (카드 구성) */
         <>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="sf-h2">{exerciseId === "other" ? exerciseOther : guide.name}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirmed(false);
-    setSlideIndex(0);
-    setShowOther(false);
-                  clearResult();
-                }}
-                className="min-h-11 px-1 text-sm font-medium text-accent underline underline-offset-4"
-              >
-                바꾸기
-              </button>
+          <section className="flex items-center gap-2 overflow-hidden rounded-3xl bg-gradient-to-br from-accent/15 to-accent/5 p-5">
+            <div className="flex flex-1 flex-col gap-2">
+              <h1 className="text-xl leading-snug font-bold break-keep">
+                지금, 내 몸에 맞는
+                <br />
+                <span className="text-accent">안전한 운동</span>을 시작해요!
+              </h1>
+              <p className="text-xs text-foreground/70">세이프핏이 당신의 안전한 운동을 도와드려요.</p>
             </div>
-            <p className="text-xs text-foreground/60">
-              남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
-            </p>
-          </div>
-
-          <section aria-label={`운동 안내 ${guide.name}`} className="flex flex-col gap-1 rounded-2xl bg-foreground/[0.04] p-3">
             {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
-            <img src={guide.imagePath} alt={guide.imageAlt} className="h-[16dvh] max-h-40 w-full rounded-xl bg-white object-contain" />
-            {exerciseId === "other" && (
-              <p className="text-xs text-foreground/70">베타 · 정확도 미보장 (목록에 없는 운동)</p>
-            )}
-            <p className="text-sm"><strong>찍을 순간</strong> · {guide.shootMoment}</p>
-            <p className="text-xs text-foreground/70">{guide.cameraNote}</p>
+            <img src="/hero.svg" alt="" className="size-24 shrink-0" />
+          </section>
+
+          <section aria-label="오늘의 운동" className="sf-card flex flex-col gap-3">
+            <h2 className="sf-h2 flex items-center gap-2 text-accent">
+              <DumbbellIcon />
+              <span className="text-foreground">오늘의 운동</span>
+            </h2>
+            {/* 누르면 운동 고르기(슬라이드)로 간다. */}
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmed(false);
+                setSlideIndex(0);
+                setShowOther(false);
+                clearResult();
+              }}
+              aria-label={`운동 바꾸기, 지금 ${exerciseId === "other" ? exerciseOther : guide.name}`}
+              className="flex items-center gap-3 rounded-2xl bg-accent/10 p-2 text-left"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
+              <img src={guide.imagePath} alt={guide.imageAlt} className="size-24 shrink-0 rounded-xl bg-white object-contain" />
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="text-xl font-bold">{exerciseId === "other" ? exerciseOther : guide.name}</span>
+                <span className="text-sm text-foreground/70">
+                  {exerciseId === "other" ? "베타 · 정확도 미보장" : `찍을 순간 · ${guide.shootMoment}`}
+                </span>
+              </span>
+              <span className="text-foreground/50"><ChevronRightIcon /></span>
+            </button>
+
+            <div className="flex items-center gap-3 rounded-2xl bg-accent/10 p-3">
+              <span className="text-accent"><BulbIcon /></span>
+              <div className="flex flex-1 flex-col gap-0.5">
+                <p className="text-sm font-semibold">촬영 가이드</p>
+                <p className="text-xs text-foreground/70">전신이 보이도록, 옆모습으로 찍어 주세요!</p>
+                <p className="text-xs text-foreground/70">{guide.cameraNote}</p>
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => setStepsOpen(true)}
@@ -322,36 +346,46 @@ export default function Home() {
             </button>
           </section>
 
-          {/* 사진: 한 줄. 고르면 작은 미리보기가 보인다. */}
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="photo"
-              className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-foreground/20 p-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
-            >
-              {photo && previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- 사용자가 고른 사진의 임시 미리보기라 최적화 대상이 아니다
-                <img src={previewUrl} alt="선택한 자세 사진 미리보기" className="size-10 shrink-0 rounded-lg object-cover" />
-              ) : null}
-              <span className="flex flex-col">
-                <span className="text-sm font-medium">{photo ? "사진 선택됨 · 눌러서 바꾸기" : "사진 찍기 · 앨범에서 고르기"}</span>
-                <span className="text-xs text-foreground/60">전신이 나오게, 옆모습으로, 얼굴은 가려 주세요</span>
-              </span>
-              <input
-                id="photo"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handlePhoto}
-                className="sr-only"
-              />
-            </label>
-            <FieldError message={errors.photo} />
-          </div>
+          <section aria-label="자세 사진과 메모" className="sf-card flex flex-col gap-3">
+            <h2 className="sf-h2 flex items-center gap-2 text-accent">
+              <CameraIcon />
+              <span className="text-foreground">자세 사진 올리기</span>
+            </h2>
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="photo"
+                className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-accent/40 p-3 text-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
+              >
+                {photo && previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- 사용자가 고른 사진의 임시 미리보기라 최적화 대상이 아니다
+                  <img src={previewUrl} alt="선택한 자세 사진 미리보기" className="max-h-56 w-full rounded-lg object-contain" />
+                ) : (
+                  <>
+                    <span className="flex size-12 items-center justify-center rounded-2xl bg-accent/15 text-accent">
+                      <CameraIcon size={28} />
+                    </span>
+                    <span className="text-sm font-medium">사진을 선택하거나 촬영하세요</span>
+                    <span className="text-xs text-foreground/60">20MB 이하, 가로·세로 모두 가능</span>
+                  </>
+                )}
+                <input
+                  id="photo"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handlePhoto}
+                  className="sr-only"
+                />
+              </label>
+              {photo && <p className="text-center text-xs text-foreground/60">다른 사진으로 바꾸려면 사진을 다시 누르세요</p>}
+              <FieldError message={errors.photo} />
+            </div>
 
-          {/* 메모 */}
-          <div className="flex flex-col gap-1">
-            <label htmlFor="memo" className="text-sm font-semibold">
-              오늘 메모 <span className="font-normal text-foreground/60">(선택)</span>
-            </label>
+            <h2 className="sf-h2 mt-1 flex items-center gap-2 text-accent">
+              <ChatIcon />
+              <label htmlFor="memo" className="text-foreground">
+                오늘의 메모 <span className="text-sm font-normal text-foreground/60">(선택사항)</span>
+              </label>
+            </h2>
             <textarea
               id="memo"
               value={memo}
@@ -360,16 +394,21 @@ export default function Home() {
                 clearResult();
               }}
               maxLength={MEMO_MAX_LENGTH}
-              rows={1}
-              placeholder="예: 무릎이 아파요"
+              rows={2}
+              placeholder="예: 무릎이 아파요, 또는 특이사항을 적어 주세요"
               className="sf-input py-2"
             />
+            <p className="-mt-1 text-right text-xs text-foreground/60">{memo.length} / {MEMO_MAX_LENGTH}</p>
             <FieldError message={errors.memo} />
-          </div>
+          </section>
 
-          <button type="submit" disabled={checking} className="sf-btn">
-            {checking ? "분석 중… (최대 30초)" : "피드백 받기"}
+          <button type="submit" disabled={checking} className="sf-btn flex items-center justify-center gap-2 shadow-md">
+            <SendIcon />
+            {checking ? "분석 중… (최대 30초)" : "피드백 요청하기"}
           </button>
+          <p className="text-center text-xs text-foreground/60">
+            오늘 남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
+          </p>
           {limitReached && (
             <div className="flex flex-col gap-3">
               <p role="alert" className="text-sm font-medium">

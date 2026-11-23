@@ -1,19 +1,21 @@
 @import "tailwindcss";
 
 /* 세이프핏 공통 색·글자 규칙
-   - 색: 바탕·글자(foreground)는 흑백, 강조(accent)는 청록 하나만 쓴다. 경고는 노랑·빨강을 안내 상자에만 쓴다.
+   - 색: 바탕·글자(foreground)는 흑백, 강조(accent)는 파랑 하나만 쓴다. 카드는 흰색(card) 위에 올린다. 경고는 노랑·빨강을 안내 상자에만 쓴다.
    - 글자: 화면 제목 20px 굵게(sf-title), 영역 제목 16px 굵게(sf-h2), 본문 14px, 보조 설명 12px
    - 모양: 입력·버튼·칩은 모두 둥근 모서리 12px(rounded-xl), 최소 높이 44px(손가락으로 누르기 쉽게) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --accent: #0f766e;
+  --background: #f4f7fd;
+  --foreground: #1b2236;
+  --card: #ffffff;
+  --accent: #3b68dc;
   --accent-foreground: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --font-sans: var(--font-geist-sans);
@@ -22,14 +24,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --accent: #2dd4bf;
-    --accent-foreground: #042f2e;
+    --background: #0b1020;
+    --foreground: #e8ecf8;
+    --card: #151c33;
+    --accent: #7aa2ff;
+    --accent-foreground: #0b1020;
   }
 }
 
 body {
+  /* 한글이 단어 중간에서 줄바꿈되지 않게 한다. */
+  word-break: keep-all;
   background: var(--background);
   color: var(--foreground);
   /* 한글이 깨끗하게 보이도록 한글 글꼴을 뒤에 추가한다. */
@@ -48,9 +53,14 @@ body {
     @apply text-sm text-red-700 dark:text-red-400;
   }
 
+  /* 카드: 화면의 묶음 하나 */
+  .sf-card {
+    @apply rounded-3xl bg-card p-4 shadow-sm;
+  }
+
   /* 입력칸 (한 줄·여러 줄 공통) */
   .sf-input {
-    @apply min-h-11 w-full rounded-xl border border-foreground/15 bg-background px-3 text-base;
+    @apply min-h-11 w-full rounded-xl border border-foreground/15 bg-card px-3 text-base;
   }
   .sf-input:focus-visible {
     @apply outline-2 outline-offset-2 outline-accent;
@@ -58,7 +68,7 @@ body {
 
   /* 버튼: 주요(색 채움) / 보조(테두리) */
   .sf-btn {
-    @apply min-h-12 rounded-xl bg-accent px-4 text-base font-semibold text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40;
+    @apply min-h-12 rounded-2xl bg-accent px-4 text-base font-semibold text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40;
   }
   .sf-btn-secondary {
     @apply min-h-11 rounded-xl border border-accent px-4 text-sm font-semibold text-accent disabled:cursor-not-allowed disabled:opacity-40;
@@ -66,7 +76,7 @@ body {
 
   /* 눌러서 고르는 칩 (aria-checked 또는 aria-pressed가 true이면 강조색) */
   .sf-chip {
-    @apply min-h-11 rounded-xl border border-foreground/15 bg-background px-4 text-sm font-medium;
+    @apply min-h-11 rounded-xl border border-foreground/15 bg-card px-4 text-sm font-medium;
   }
   .sf-chip[aria-checked="true"],
   .sf-chip[aria-pressed="true"] {
