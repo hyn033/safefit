@@ -1,7 +1,13 @@
 // 화면과 AI 지시문이 함께 쓰는 한국어 이름표. (Design Ref: §3 선택지)
 // 한곳에 모아 두어 화면 글자와 AI에게 보내는 글자가 서로 달라지지 않게 한다.
 
-import type { Experience, ExerciseId, InjuryPart } from "./types";
+import type { Experience, ExerciseId, Gender, InjuryPart } from "./types";
+
+/** 성별 */
+export const GENDER_LABELS: Record<Gender, string> = {
+  male: "남성",
+  female: "여성",
+};
 
 /** 운동 경험 */
 export const EXPERIENCE_LABELS: Record<Experience, string> = {
@@ -26,7 +32,6 @@ export const EXERCISE_LABELS: Record<ExerciseId, string> = {
   squat: "스쿼트",
   lunge: "런지",
   plank: "플랭크",
-  pushup: "푸시업",
   bridge: "브릿지",
   other: "기타",
 };

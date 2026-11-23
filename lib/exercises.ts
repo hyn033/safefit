@@ -1,9 +1,9 @@
 // Design Ref: §4.6 — 운동 안내 데이터. AI가 매번 만들지 않고 미리 정해 둔 고정 내용을 쓴다.
 // 주의: 문구와 카메라 수치는 초안이며 전문가 확인이 필요하다. (PLAN 7번)
-// 예시 그림 4장은 흰 바탕에 단순한 사람 모양으로 옆모습 자세만 그린 SVG(public/guide/)다. 카메라 위치는 cameraNote 글로 안내한다.
-// 바꿀 때는 imagePath만 고치면 된다.
+// 예시 이미지는 옆모습 자세 사진이며 남성(public/guide/male/)·여성(public/guide/female/) 두 벌이다. 몸 정보의 성별에 맞는 쪽을 보여 준다.
+// '기타'는 일반 가이드 그림(other.svg)을 쓴다. 카메라 위치는 cameraNote 글로 안내한다. 바꿀 때는 imagePath만 고치면 된다.
 
-import type { ExerciseId } from "./types";
+import type { ExerciseId, Gender } from "./types";
 
 export interface ExerciseGuide {
   id: ExerciseId;
@@ -16,6 +16,8 @@ export interface ExerciseGuide {
   cameraNote: string;
   /** 예시 이미지 경로 (public/guide/…) */
   imagePath: string;
+  /** 여성용 예시 이미지 경로. 없으면 imagePath를 그대로 쓴다. */
+  imagePathFemale?: string;
   /** 이미지 대체 텍스트 */
   imageAlt: string;
 }
@@ -38,8 +40,9 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     ],
     shootMoment: "가장 깊이 앉은 순간",
     cameraNote: "옆에서 전신이 보이게, 폰을 허리 높이에 두고 2~3m 떨어져서 찍어요.",
-    imagePath: "/guide/squat.svg",
-    imageAlt: "옆에서 본 가장 깊이 앉은 스쿼트 자세 그림",
+    imagePath: "/guide/male/squat.jpg",
+    imagePathFemale: "/guide/female/squat.jpg",
+    imageAlt: "옆에서 본 가장 깊이 앉은 스쿼트 자세 사진",
   },
   lunge: {
     id: "lunge",
@@ -52,8 +55,9 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     ],
     shootMoment: "앞무릎이 가장 많이 굽혀진 순간",
     cameraNote: "옆에서 전신이 보이게, 폰을 허리 높이에 두고 2~3m 떨어져서 찍어요.",
-    imagePath: "/guide/lunge.svg",
-    imageAlt: "옆에서 본 앞무릎을 굽힌 런지 자세 그림",
+    imagePath: "/guide/male/lunge.jpg",
+    imagePathFemale: "/guide/female/lunge.jpg",
+    imageAlt: "옆에서 본 앞무릎을 굽힌 런지 자세 사진",
   },
   plank: {
     id: "plank",
@@ -66,22 +70,9 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     ],
     shootMoment: "자세를 잡고 버티는 중간",
     cameraNote: "옆에서 전신이 보이게, 폰을 몸 높이 가까이 두고 2~3m 떨어져서 찍어요.",
-    imagePath: "/guide/plank.svg",
-    imageAlt: "옆에서 본 플랭크 자세 그림",
-  },
-  pushup: {
-    id: "pushup",
-    name: "푸시업",
-    steps: [
-      "손을 어깨보다 조금 넓게 짚고 엎드려요.",
-      "머리부터 발끝까지 일직선을 유지해요.",
-      "팔꿈치를 굽혀 가슴을 바닥 가까이 내려요.",
-      "배에 힘을 주고 밀어 올라와요.",
-    ],
-    shootMoment: "가슴이 가장 낮게 내려간 순간",
-    cameraNote: "옆에서 전신이 보이게, 폰을 바닥 가까이 두고 2~3m 떨어져서 찍어요.",
-    imagePath: "/guide/pushup.svg",
-    imageAlt: "옆에서 본 푸시업 자세 그림",
+    imagePath: "/guide/male/plank.jpg",
+    imagePathFemale: "/guide/female/plank.jpg",
+    imageAlt: "옆에서 본 플랭크 자세 사진",
   },
   bridge: {
     id: "bridge",
@@ -94,8 +85,9 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     ],
     shootMoment: "엉덩이를 가장 높이 든 순간",
     cameraNote: "옆에서 전신이 보이게, 폰을 바닥 가까이 두고 2~3m 떨어져서 찍어요.",
-    imagePath: "/guide/bridge.svg",
-    imageAlt: "옆에서 본 브릿지 자세 그림",
+    imagePath: "/guide/male/bridge.jpg",
+    imagePathFemale: "/guide/female/bridge.jpg",
+    imageAlt: "옆에서 본 브릿지 자세 사진",
   },
   other: {
     id: "other",
@@ -113,7 +105,6 @@ const EXERCISE_ALIASES: Record<Exclude<ExerciseId, "other">, string[]> = {
   squat: ["스쿼트", "스쿼츠", "squat"],
   lunge: ["런지", "런쥐", "lunge"],
   plank: ["플랭크", "플랭", "plank"],
-  pushup: ["푸시업", "푸쉬업", "팔굽혀펴기", "pushup"],
   bridge: ["브릿지", "브리지", "힙브릿지", "글루트브릿지", "bridge"],
 };
 
@@ -130,4 +121,9 @@ export function matchExercise(input: string): ExerciseId {
 }
 
 /** 홈 화면 슬라이드에 보여 주는 운동 순서 ('기타'는 슬라이드가 아니라 직접 입력으로 고른다) */
-export const SLIDE_EXERCISE_IDS = ["squat", "lunge", "plank", "pushup", "bridge"] as const;
+export const SLIDE_EXERCISE_IDS = ["squat", "lunge", "plank", "bridge"] as const;
+
+/** 성별에 맞는 예시 이미지 경로 (성별을 모르거나 여성용이 없으면 기본 이미지) */
+export function getGuideImage(guide: ExerciseGuide, gender?: Gender): string {
+  return gender === "female" && guide.imagePathFemale ? guide.imagePathFemale : guide.imagePath;
+}

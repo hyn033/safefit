@@ -45,7 +45,6 @@ const EXERCISE_RELATED_PARTS: Record<Exclude<ExerciseId, "other">, InjuryPart[]>
   squat: ["knee", "back", "ankle"],
   lunge: ["knee", "ankle", "back"],
   plank: ["back", "shoulder", "wrist", "neck"],
-  pushup: ["shoulder", "wrist", "back", "neck"],
   bridge: ["back", "knee", "neck"],
 };
 

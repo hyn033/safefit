@@ -4,7 +4,7 @@
 // 브라우저 저장소는 시크릿 모드나 저장 차단 설정에서 오류가 날 수 있다.
 // 그래서 모든 읽기·쓰기를 try/catch로 감싸고, 실패하면 "값 없음"으로 취급한다.
 
-import { EXPERIENCE_LEVELS, INJURY_PARTS } from "./types";
+import { EXPERIENCE_LEVELS, GENDERS, INJURY_PARTS } from "./types";
 import type { ConsentRecord, Profile, UsageRecord } from "./types";
 import { INJURY_OTHER_MAX_LENGTH } from "./validate";
 
@@ -93,6 +93,7 @@ export function saveConsent(now: Date = new Date()): boolean {
 function isProfile(value: unknown): value is Profile {
   if (!isRecord(value)) return false;
   if (!(EXPERIENCE_LEVELS as readonly unknown[]).includes(value.experience)) return false;
+  if (value.gender !== undefined && !(GENDERS as readonly unknown[]).includes(value.gender)) return false;
   if (typeof value.noInjury !== "boolean") return false;
   if (
     !Array.isArray(value.injuries) ||

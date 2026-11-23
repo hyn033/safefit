@@ -2,7 +2,7 @@
 // 안전 문구(통증 안내, 부상 부위 주의 등)는 AI에 맡기지 않고 코드가 붙인다. (Design Ref: §1.1, §4.4)
 
 import { EXERCISE_GUIDES } from "./exercises";
-import { EXERCISE_LABELS, EXPERIENCE_LABELS, INJURY_LABELS } from "./labels";
+import { EXERCISE_LABELS, EXPERIENCE_LABELS, GENDER_LABELS, INJURY_LABELS } from "./labels";
 import type { FeedbackRequest } from "./types";
 
 export const SYSTEM_PROMPT = `당신은 홈트레이닝 자세를 봐 주는 안전 우선 코치입니다.
@@ -77,6 +77,7 @@ export function buildUserText(request: FeedbackRequest): string {
     ...guideLines(request),
     `운동 확인: ${request.exerciseConfirmed ? "사용자가 이 운동이 맞다고 확인함 (status를 mismatch로 답하지 말고, 이 운동으로 분석하거나 자세를 알아볼 수 없으면 retake로 답할 것)" : "확인 요청 없음"}`,
     "몸 정보:",
+    ...(profile.gender ? [`- 성별: ${GENDER_LABELS[profile.gender]} (자세 설명의 참고로만 쓰고 성별로 평가하지 않음)`] : []),
     `- 운동 경험: ${EXPERIENCE_LABELS[profile.experience]}`,
     `- 부상 이력·불편한 부위: ${injuryText(request)}`,
     `- 체중: ${profile.weightKg}kg`,

@@ -7,9 +7,9 @@
 import { useState, useSyncExternalStore } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { INJURY_LABELS } from "@/lib/labels";
+import { GENDER_LABELS, INJURY_LABELS } from "@/lib/labels";
 import { getProfile, saveProfile } from "@/lib/storage";
-import { INJURY_PARTS } from "@/lib/types";
+import { GENDERS, INJURY_PARTS } from "@/lib/types";
 import type { Experience, InjuryPart, Profile } from "@/lib/types";
 import { INJURY_OTHER_MAX_LENGTH, WEIGHT_MAX_KG, WEIGHT_MIN_KG, validateProfileForm } from "@/lib/validate";
 import type { ProfileFieldErrors, ProfileFormValues } from "@/lib/validate";
@@ -23,9 +23,10 @@ const EXPERIENCE_OPTIONS: { value: Experience; label: string }[] = [
 /** 저장된 몸 정보를 입력칸 값으로 바꾼다. 없으면 빈 입력칸 */
 function toFormValues(profile: Profile | null): ProfileFormValues {
   if (!profile) {
-    return { experience: "", noInjury: false, injuries: [], injuryOther: "", weight: "" };
+    return { gender: "", experience: "", noInjury: false, injuries: [], injuryOther: "", weight: "" };
   }
   return {
+    gender: profile.gender ?? "",
     experience: profile.experience,
     noInjury: profile.noInjury,
     injuries: profile.injuries,
@@ -103,6 +104,26 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
           {initialProfile ? "내 몸에 맞는 안내를 위해 사용돼요." : "저장된 몸 정보가 없어요. 한 번만 입력해 주세요."}
         </p>
       </div>
+
+      {/* 성별: 운동 안내 사진을 고르는 데 쓴다. */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="sf-h2 mb-2">성별</legend>
+        <div role="radiogroup" aria-label="성별" className="grid grid-cols-2 gap-2">
+          {GENDERS.map((gender) => (
+            <button
+              key={gender}
+              type="button"
+              role="radio"
+              aria-checked={values.gender === gender}
+              onClick={() => update({ gender })}
+              className="sf-chip px-2"
+            >
+              {GENDER_LABELS[gender]}
+            </button>
+          ))}
+        </div>
+        <FieldError id="gender-error" message={errors.gender} />
+      </fieldset>
 
       {/* 운동 경험: 3칸 중 하나 */}
       <fieldset className="flex flex-col gap-2">

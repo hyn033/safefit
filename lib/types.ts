@@ -6,6 +6,9 @@
 // ─────────────────────────────────────────────
 
 /** 운동 경험: 처음 / 1년 미만 / 1년 이상 */
+export const GENDERS = ["male", "female"] as const;
+export type Gender = (typeof GENDERS)[number];
+
 export const EXPERIENCE_LEVELS = ["beginner", "under1y", "over1y"] as const;
 export type Experience = (typeof EXPERIENCE_LEVELS)[number];
 
@@ -22,7 +25,7 @@ export const INJURY_PARTS = [
 export type InjuryPart = (typeof INJURY_PARTS)[number];
 
 /** 운동 목록: 스쿼트, 런지, 플랭크, 기타(목록에 없는 운동) */
-export const EXERCISE_IDS = ["squat", "lunge", "plank", "pushup", "bridge", "other"] as const;
+export const EXERCISE_IDS = ["squat", "lunge", "plank", "bridge", "other"] as const;
 export type ExerciseId = (typeof EXERCISE_IDS)[number];
 
 // ─────────────────────────────────────────────
@@ -31,6 +34,8 @@ export type ExerciseId = (typeof EXERCISE_IDS)[number];
 
 /** 몸 정보 (브라우저에만 저장) */
 export interface Profile {
+  /** 성별. 운동 안내 그림을 고르고 AI에게 참고로 알린다. (예전에 저장된 몸 정보에는 없을 수 있다) */
+  gender?: Gender;
   experience: Experience;
   /** "없음"을 고른 경우 true. 이때 injuries는 빈 배열이어야 한다. */
   noInjury: boolean;

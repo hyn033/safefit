@@ -2,7 +2,7 @@
 // 서버에서만 쓴다. (화면에서 쓰면 브라우저로 내려가는 코드가 늘어나므로 화면용 검사는 lib/validate.ts에 따로 둔다.)
 
 import { z } from "zod";
-import { EXERCISE_IDS, EXPERIENCE_LEVELS, INJURY_PARTS } from "./types";
+import { EXERCISE_IDS, EXPERIENCE_LEVELS, GENDERS, INJURY_PARTS } from "./types";
 import { WEIGHT_MAX_KG, WEIGHT_MIN_KG } from "./validate";
 
 /** 사진 data URL 허용 형식: JPEG·PNG·WebP (Design Ref: §3.1) */
@@ -14,6 +14,7 @@ const IMAGE_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,
 
 const profileSchema = z
   .object({
+    gender: z.enum(GENDERS).optional(),
     experience: z.enum(EXPERIENCE_LEVELS),
     noInjury: z.boolean(),
     injuries: z.array(z.enum(INJURY_PARTS)).max(INJURY_PARTS.length),
