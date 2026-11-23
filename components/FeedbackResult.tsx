@@ -10,7 +10,7 @@ import { getGuideImage, type ExerciseGuide } from "@/lib/exercises";
 import type { FeedbackResponse, Gender, OverlayItem, Verdict } from "@/lib/types";
 
 const VERDICT_LABELS: Record<Verdict, string> = {
-  similar: "정석과 거의 같음",
+  similar: "정석",
   slight: "정석과 조금 다름",
   large: "정석과 많이 다름",
 };

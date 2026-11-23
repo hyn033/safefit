@@ -4,7 +4,18 @@
 import { getBodyLoad } from "./body";
 import { detectPain, detectSevere, getInjuryParts } from "./safety";
 import type { AiAnswer } from "./schemas";
-import type { FeedbackNotices, FeedbackRequest, FeedbackResponse } from "./types";
+import type { FeedbackNotices, FeedbackRequest, FeedbackResponse, OverlayItem, OverlayPart } from "./types";
+
+/** 정석(similar)일 때 초록 선으로 보여 줄 부위. AI가 따로 말하지 않은 부위는 정석과 같은 것으로 본다. */
+const GOOD_OVERLAY_PARTS: OverlayPart[] = ["arm", "back", "thigh", "shin"];
+
+/** 사진 위에 그을 부위별 결과. 정석이면 AI가 선을 주지 않아도 몸 전체를 초록으로 보여 준다. */
+function buildOverlay(answer: AiAnswer): OverlayItem[] | undefined {
+  const items = answer.overlay ?? [];
+  if (answer.verdict !== "similar") return items.length > 0 ? items : undefined;
+  const given = new Set(items.map((item) => item.part));
+  return [...items, ...GOOD_OVERLAY_PARTS.filter((part) => !given.has(part)).map((part): OverlayItem => ({ part, kind: "good" }))];
+}
 
 /** 코드가 항상 붙이는 안내. AI 주의·의료 아님은 항상, 통증·심한 증상·부상 부위는 해당할 때만 붙인다. */
 function buildNotices(request: FeedbackRequest): FeedbackNotices {
@@ -46,7 +57,7 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
     problemParts: answer.problemParts ?? undefined,
     fixes: answer.fixes ?? undefined,
     memoAnswer: answer.memoAnswer ?? undefined,
-    overlay: answer.overlay && answer.overlay.length > 0 ? answer.overlay : undefined,
+    overlay: buildOverlay(answer),
     uncertain: answer.uncertain ?? undefined,
   };
 }
