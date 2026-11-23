@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import ConsentGate from "@/components/ConsentGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,7 +39,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <span className="text-base font-semibold">세이프핏</span>
           </header>
 
-          <main className="flex-1 px-4 pt-4 pb-20">{children}</main>
+          <main className="flex-1 px-4 pt-4 pb-20">
+            {/* Design Ref: §5.1 — 동의가 없으면 모든 화면에서 /consent로 보낸다. */}
+            <ConsentGate>{children}</ConsentGate>
+          </main>
 
           <footer
             aria-label="안내"
