@@ -7,6 +7,9 @@
 import { EXPERIENCE_LEVELS, INJURY_PARTS } from "./types";
 import type { ConsentRecord, Profile, UsageRecord } from "./types";
 
+/** 한 기기(브라우저)에서 하루에 요청할 수 있는 피드백 횟수 */
+export const DAILY_LIMIT = 10;
+
 /** 저장 키 (Design Ref: §3) */
 const KEYS = {
   consent: "safefit.consent",
