@@ -48,9 +48,11 @@ export const feedbackRequestSchema = z
     exerciseConfirmed: z.boolean().optional(),
     measurements: z
       .object({
-        reference: z.enum(["ankle", "knee"]),
-        lineAngleDeg: z.number().min(0).max(180),
-        hipOffsetPct: z.number().min(-100).max(100),
+        lineAngleDeg: z.number().min(0).max(180).optional(),
+        hipOffsetPct: z.number().min(-100).max(100).optional(),
+        kneeAngleDeg: z.number().min(0).max(180).optional(),
+        torsoLeanDeg: z.number().min(0).max(180).optional(),
+        elbowOffsetPct: z.number().min(0).max(300).optional(),
       })
       .optional(),
   })

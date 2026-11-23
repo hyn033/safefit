@@ -74,17 +74,25 @@ export interface FeedbackRequest {
   imageDataUrl: string;
   /** 운동·사진 불일치 확인에서 "맞다"고 답한 재요청이면 true */
   exerciseConfirmed?: boolean;
-  /** 브라우저가 사진에서 잰 몸 중심선 측정값 (플랭크·브릿지만, 몸을 못 찾으면 없음) */
-  measurements?: BodyLineMeasurement;
+  /** 브라우저가 사진에서 잰 몸 측정값 (몸을 못 찾으면 없음) */
+  measurements?: PoseMeasurements;
 }
 
-/** 몸 중심선 측정값: 어깨–엉덩이–끝 관절(플랭크는 발목, 브릿지는 무릎)이 이루는 각도와 엉덩이의 벗어난 정도 */
-export interface BodyLineMeasurement {
-  reference: "ankle" | "knee";
-  /** 180에 가까울수록 일직선 */
-  lineAngleDeg: number;
-  /** 어깨–끝 관절 선 길이에 대한 %. +이면 엉덩이가 선보다 아래(처짐), -이면 위(솟음) */
-  hipOffsetPct: number;
+/**
+ * 브라우저가 사진에서 잰 몸 측정값. 운동마다 필요한 항목만 들어 있고, 관절이 안 보여 못 잰 항목은 없다.
+ * 판정은 이 값을 보고 코드(lib/form.ts)가 한다.
+ */
+export interface PoseMeasurements {
+  /** 어깨–엉덩이–끝 관절(플랭크는 발목, 브릿지는 무릎) 각도(도). 180에 가까울수록 일직선 */
+  lineAngleDeg?: number;
+  /** 엉덩이가 어깨–끝 관절 선에서 벗어난 정도(선 길이의 %). +이면 아래(처짐), -이면 위(솟음) */
+  hipOffsetPct?: number;
+  /** 엉덩이–무릎–발목 각도(도). 작을수록 깊이 굽힘 */
+  kneeAngleDeg?: number;
+  /** 어깨→엉덩이 선이 수직에서 기울어진 정도(도). 0이면 상체가 곧게 선 것 */
+  torsoLeanDeg?: number;
+  /** 팔꿈치가 어깨 바로 아래에서 옆으로 벗어난 정도(어깨–엉덩이 길이의 %) */
+  elbowOffsetPct?: number;
 }
 
 /** 응답 상태: 정상 / 다시 촬영 / 운동·사진 불일치 확인 / 심한 증상 */

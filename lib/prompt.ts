@@ -3,6 +3,7 @@
 
 import { EXERCISE_GUIDES } from "./exercises";
 import { BODY_LOAD_LABELS, calcBmi, getBodyLoad } from "./body";
+import { judgeForm } from "./form";
 import { EXERCISE_LABELS, GENDER_LABELS, INJURY_LABELS } from "./labels";
 import type { FeedbackRequest } from "./types";
 
@@ -15,9 +16,10 @@ export const SYSTEM_PROMPT = `당신은 홈트레이닝 자세를 봐 주는 안
 2. 정석과의 차이는 similar(거의 같음), slight(조금 다름), large(많이 다름) 중 하나로만 표시하세요. 각도·거리·비율 같은 정밀한 숫자는 말하지 않습니다. 사진 한 장으로는 정밀하게 잴 수 없기 때문입니다.
 3. assessment는 정석과 비교한 한 줄 요약입니다. 잘한 점이 있으면 먼저 짧게 인정하고, 그다음 다른 점을 말하세요.
 4. differences에는 사진에서 실제로 보이는 정석과의 다른 점만 적으세요. 보이지 않는 것(관절 속 느낌, 근육 사용, 호흡 등)을 추측해서 적지 않습니다. problemParts에는 그 때문에 무리가 갈 수 있는 몸 부위를 적으세요.
-   요청에 "몸 측정값"이 있으면 일직선·처짐·솟음은 그 판정을 따르세요. 판정이 "정석 범위 안"이면 그 부분은 차이가 아니며, 사진에서 다른 분명한 문제가 따로 없으면 verdict는 similar입니다. "정석 범위 밖"이면 엉덩이가 처졌는지(아래) 솟았는지(위)에 맞게 차이와 수정 방법을 적으세요. 각도·퍼센트 같은 측정 숫자는 사용자에게 보이는 글에 쓰지 말고 "엉덩이가 조금 처져 있어요"처럼 쉬운 말로만 표현합니다.
-   사진에서 분명히 보이는 차이만 적으세요. 미세하거나 확신이 없는 차이, 보는 각도 때문에 달라 보이는 것은 적지 않습니다. 정석과 크게 다르지 않으면 verdict는 similar이고 differences·problemParts·fixes는 빈 목록([])으로 두세요. 고칠 점을 억지로 만들어 내지 마세요.
+   요청에 "자세 판정 결과"가 있으면 몸 인식이 잰 값으로 프로그램이 이미 정한 것이므로 verdict를 그 판정 그대로 쓰고, 판정을 뒤집거나 사진을 다시 평가하지 마세요. differences에는 "정석과 다른 점"만 쉬운 말로 풀어 쓰고(없으면 빈 목록, "참고" 항목은 다른 점이 아니므로 differences에 쓰지 마세요. 참고는 fixes의 맞춤 안내에만 활용하세요), problemParts에는 그 때문에 무리가 갈 부위를 적으세요. 각도·퍼센트 같은 숫자는 쓰지 마세요.
+   사진에서 분명히 보이는 차이만 적으세요. 미세하거나 확신이 없는 차이, 보는 각도 때문에 달라 보이는 것은 적지 않습니다. 정석과 크게 다르지 않으면 verdict는 similar이고 differences·problemParts는 빈 목록([])으로 두세요. 고칠 점을 억지로 만들어 내지 마세요. (fixes는 아래 5번 규칙처럼 몸 정보에 맞는 안내가 필요하면 쓰세요.)
 5. fixes는 최대 3가지이고, 사용자가 바로 해 볼 수 있는 구체적인 동작이어야 합니다. 몸 정보를 반드시 반영하세요.
+   - 자세가 정석이어도 부상 이력이 있는 부위나 관절 부담 단계가 "주의·높음"이면, 그 부위에 무리가 가지 않게 하는 팁을 1~3개 쓰세요. (예: 무릎이 불편하면 "깊이를 얕게 시작하고 무릎이 안으로 모이지 않게 하세요") 정석이고 부상도 관절 부담도 없으면 fixes는 빈 목록이어도 됩니다. 부상 이력이 있는데 fixes를 비우면 안 됩니다.
    - 부상 이력이 있는 부위에는 무리가 적은 방향으로 고칩니다. (예: 무릎이 불편하면 깊이를 줄이고 발 간격을 넓히기, 허리가 불편하면 가동 범위를 줄이고 상체를 세우기, 손목·어깨가 불편하면 버티는 시간을 줄이거나 동작을 쉬운 변형으로 바꾸기)
    - 몸 정보에 "관절 부담" 단계가 있으면 따르세요. "주의"이면 스쿼트·런지처럼 굽히는 운동은 깊이를 얕게 시작하라고 권하고, "높음"이면 얕은 깊이와 낮은 강도·쉬운 변형(예: 의자나 벽을 이용한 동작, 횟수·시간 줄이기)을 먼저 권하세요. 이유를 말할 때는 체중·BMI·비만 같은 말 없이 "무릎·허리 관절의 부담을 줄이기 위해"처럼 표현합니다.
    - 정석에 가까워지는 것보다 안전이 우선입니다. 정석과 무리 없는 방법이 충돌하면 무리 없는 방법을 권하세요.
@@ -33,7 +35,7 @@ export const SYSTEM_PROMPT = `당신은 홈트레이닝 자세를 봐 주는 안
     - 쉬운 말로 1~3문장, 사진과 몸 정보를 참고하되 정밀한 숫자는 말하지 않습니다.
     - 진단·치료·약·병명 이야기는 하지 않습니다. 몸이 아픈 이유를 묻는 질문에는 원인을 단정하지 말고, 운동을 멈추고 계속되면 전문가와 상담하라고 안내하세요.
     - 질문이 아니거나(예: "무릎이 아파요"처럼 상태만 적은 경우), 운동·자세와 무관한 질문이면 memoAnswer는 null로 두세요.
-11. overlay는 몸 부위별로 정석과 같은지 다른지만 알려 주는 항목입니다. 선의 위치는 다른 프로그램이 정하므로 좌표는 쓰지 않습니다. status가 ok일 때만 적고, 아니면 null로 두세요.
+11. "자세 판정 결과"가 있으면 overlay는 null로 두세요(프로그램이 그립니다). 판정 결과가 없을 때만, overlay에 몸 부위별로 정석과 같은지 다른지만 알려 주는 항목입니다. 선의 위치는 다른 프로그램이 정하므로 좌표는 쓰지 않습니다. status가 ok일 때만 적고, 아니면 null로 두세요.
     - part는 arm(팔), back(등: 어깨~엉덩이), thigh(허벅지), shin(정강이), neck(목) 중 하나입니다. 사진에서 보이고 정석에서 확인할 만한 부위만 3~5개 적으세요.
     - kind "good"은 그 부위가 정석과 일치할 때, "fix"는 정석과 달라서 고쳐야 할 때입니다. 부위마다 정석과 비교해 하나씩 고르세요. differences·fixes에 나온 부위는 "fix"여야 앞뒤가 맞습니다.
     - 확신이 없는 부위는 적지 마세요.
@@ -51,13 +53,6 @@ JSON 모양:
   "overlay": [{ "part": "arm" | "back" | "thigh" | "shin" | "neck", "kind": "good" | "fix" }] | null,   // 3~5개
   "uncertain": true | false
 }`;
-
-/**
- * 몸 중심선이 일직선이라고 보는 범위. (초안, 예시 사진으로 맞춰 본 값이며 전문가 확인이 필요하다)
- * minAngle: 어깨–엉덩이–끝 관절 각도의 최솟값(도), maxOffsetPct: 엉덩이가 선에서 벗어나도 되는 최대 %
- */
-const STRAIGHT_RANGE_PLANK = { minAngle: 158, maxOffsetPct: 10 };
-const STRAIGHT_RANGE_BRIDGE = { minAngle: 160, maxOffsetPct: 12 };
 
 /** 사용자가 고른 운동 이름 ('기타'는 직접 쓴 이름) */
 function exerciseName(request: FeedbackRequest): string {
@@ -88,23 +83,37 @@ function guideLines(request: FeedbackRequest): string[] {
 }
 
 /**
- * 브라우저가 잰 몸 중심선 측정값을 글로 만든다. 없으면 빈 목록.
- * 일직선 여부는 눈대중보다 이 숫자가 정확하므로, 숫자를 따르라고 AI에게 알린다.
+ * 몸 인식으로 잰 값으로 코드(lib/form.ts)가 정한 자세 판정을 글로 만든다. 판정할 수 없으면 빈 목록(그때는 AI가 눈대중으로 판단).
+ * 판정과 다른 점은 코드가 정한 것이므로 AI는 바꾸지 않고, 쉬운 말로 풀어 쓰며 몸 정보에 맞는 안내를 덧붙인다.
  */
-function measurementLines(request: FeedbackRequest): string[] {
-  const m = request.measurements;
-  if (!m) return [];
-  const endName = m.reference === "ankle" ? "발목" : "무릎";
-  const side = m.hipOffsetPct > 0 ? "아래" : "위";
-  const range = request.exerciseId === "plank" ? STRAIGHT_RANGE_PLANK : STRAIGHT_RANGE_BRIDGE;
-  const inRange = m.lineAngleDeg >= range.minAngle && Math.abs(m.hipOffsetPct) <= range.maxOffsetPct;
+function formJudgementLines(request: FeedbackRequest): string[] {
+  const judged = judgeForm(request.exerciseId, request.measurements);
+  if (!judged) return [];
   return [
-    `몸 측정값 (프로그램이 사진에서 직접 잰 값. 일직선·처짐·솟음 판단은 눈대중보다 이 값을 따를 것):`,
-    `- 어깨–엉덩이–${endName} 각도: ${m.lineAngleDeg}도 (180도에 가까울수록 일직선)`,
-    `- 엉덩이 위치: 어깨–${endName}을 이은 선보다 ${Math.abs(m.hipOffsetPct)}% ${side}`,
-    `- 판정: ${inRange ? "정석 범위 안(일직선). 일직선·처짐·솟음·허리 꺾임을 차이로 적지 말 것" : "정석 범위 밖. 일직선에서 벗어난 것으로 보고 그 부분을 차이로 적을 것"}`,
+    "자세 판정 결과 (몸 인식이 사진에서 잰 값으로 프로그램이 정함. 바꾸지 말고 그대로 따를 것):",
+    `- 판정: ${VERDICT_TEXT[judged.verdict]}`,
+    `- 정석과 다른 점: ${judged.issues.length === 0 ? "없음" : judged.issues.join(" / ")}`,
+    ...judged.facts.map((fact) => `- 참고: ${fact}`),
   ];
 }
+
+/**
+ * 몸 정보에 따라 fixes에 꼭 써야 하는 맞춤 안내를 요청 본문에 직접 적는다. (규칙 문장만으로는 AI가 빠뜨리는 일이 있어서)
+ * 부상 부위가 있거나 관절 부담이 "주의·높음"이면, 자세가 정석이어도 그 부위에 무리가 가지 않게 하는 팁을 쓰게 한다.
+ */
+function careLines(request: FeedbackRequest): string[] {
+  const { profile } = request;
+  const lines: string[] = [];
+  if (!profile.noInjury && profile.injuries.length > 0) {
+    lines.push(`- 부상·불편한 부위(${injuryText(request)}): 자세가 정석이어도 fixes에 이 부위에 무리가 가지 않게 하는 구체적인 팁을 1~3개 반드시 쓸 것`);
+  }
+  if (getBodyLoad(profile) !== "normal" && (request.exerciseId === "squat" || request.exerciseId === "lunge")) {
+    lines.push("- 관절 부담 단계가 높아서: 깊이를 얕게 시작하라는 팁을 fixes에 쓸 것 (체중·BMI 말은 쓰지 않음)");
+  }
+  return lines.length > 0 ? ["맞춤 안내 (반드시 반영):", ...lines] : [];
+}
+
+const VERDICT_TEXT = { similar: "정석 (similar)", slight: "조금 다름 (slight)", large: "많이 다름 (large)" } as const;
 
 /** AI에게 보낼 사용자 쪽 글 (사진은 따로 첨부한다) */
 export function buildUserText(request: FeedbackRequest): string {
@@ -121,7 +130,8 @@ export function buildUserText(request: FeedbackRequest): string {
     ...(profile.heightCm ? [`- 키: ${profile.heightCm}cm`] : []),
     `- 체중: ${profile.weightKg}kg`,
     ...(calcBmi(profile) !== null ? [`- 체질량지수(BMI): ${calcBmi(profile)}, 관절 부담: ${BODY_LOAD_LABELS[getBodyLoad(profile)]} (판단은 코드가 했으니 그대로 따르고, 사용자에게 BMI·체중을 이유로 말하지 않음)`] : []),
-    ...measurementLines(request),
+    ...formJudgementLines(request),
+    ...careLines(request),
     "오늘 메모 (참고 정보, 아래 <<< >>> 사이의 글):",
     "<<<",
     memo,

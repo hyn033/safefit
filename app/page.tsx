@@ -13,9 +13,9 @@ import { BulbIcon, CameraIcon, ChatIcon, DumbbellIcon, SendIcon } from "@/compon
 import { toSevereResponse } from "@/lib/feedback";
 import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
-import type { ApiErrorResponse, BodyLineMeasurement, ExerciseId, FeedbackRequest, FeedbackResponse } from "@/lib/types";
+import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse, PoseMeasurements } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
-import { analyzePose } from "@/lib/pose";
+import { analyzePose, measurementsFor } from "@/lib/pose";
 import { MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
 import type { FeedbackFieldErrors } from "@/lib/validate";
 
@@ -24,15 +24,15 @@ const subscribeNothing = () => () => {};
 /** 측정이 이 시간 안에 끝나지 않으면 측정 없이 요청한다. (처음에는 몸 인식 모델을 내려받느라 시간이 걸린다) */
 const MEASURE_TIMEOUT_MS = 10_000;
 
-/** 플랭크·브릿지 사진의 몸 중심선 측정값. 다른 운동이거나 몸을 못 찾으면 undefined */
-async function measureBodyLine(photoUrl: string | null, exerciseId: ExerciseId): Promise<BodyLineMeasurement | undefined> {
-  if (!photoUrl || (exerciseId !== "plank" && exerciseId !== "bridge")) return undefined;
+/** 사진에서 잰 몸 측정값. 몸을 못 찾거나 시간이 오래 걸리면 undefined (그러면 AI가 눈대중으로 판단한다) */
+async function measureBody(photoUrl: string | null, exerciseId: ExerciseId): Promise<PoseMeasurements | undefined> {
+  if (!photoUrl) return undefined;
   try {
     const image = new Image();
     image.src = photoUrl;
     await image.decode();
     const analysis = await Promise.race([analyzePose(image), new Promise<null>((resolve) => setTimeout(() => resolve(null), MEASURE_TIMEOUT_MS))]);
-    return (exerciseId === "plank" ? analysis?.ankleLine : analysis?.kneeLine) ?? undefined;
+    return measurementsFor(analysis, exerciseId);
   } catch {
     return undefined;
   }
@@ -191,8 +191,8 @@ export default function Home() {
     setChecking(true);
     try {
       const imageDataUrl = await prepareImage(photo);
-      // 플랭크·브릿지는 몸 중심선이 곧은지 눈대중 대신 각도로 재서 함께 보낸다. (몸을 못 찾거나 오래 걸리면 측정 없이 보낸다)
-      const measurements = await measureBodyLine(previewUrl, exerciseId);
+      // 자세가 정석과 같은지는 눈대중 대신 몸 인식으로 잰 값으로 판정한다. (몸을 못 찾거나 오래 걸리면 측정 없이 보낸다)
+      const measurements = await measureBody(previewUrl, exerciseId);
       // 요청을 보내는 순간 1회로 센다. 성공·실패와 무관하다. (사진 오류·입력 누락처럼 보내기 전에 막은 경우는 세지 않는다.)
       setUsageCount(incrementUsage().count);
       const request: FeedbackRequest = { ...base, imageDataUrl, ...(measurements ? { measurements } : {}) };

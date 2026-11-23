@@ -2,7 +2,7 @@
 // 사진은 서버로 따로 보내지 않고 이 브라우저 안에서만 처리한다. 모델·실행 파일은 우리 사이트(public/mediapipe)에서 받는다.
 // 브라우저에서만 쓴다. (서버 코드에서 불러오지 않는다)
 
-import type { OverlayPart } from "./types";
+import type { ExerciseId, OverlayPart, PoseMeasurements } from "./types";
 
 /** 사진 전체를 0~1로 본 점 위치 */
 export type Point = [number, number];
@@ -91,6 +91,12 @@ export interface PoseAnalysis {
   ankleLine?: BodyLineMeasure;
   /** 어깨–엉덩이–무릎 기준 측정값 (관절이 안 보이면 없음) */
   kneeLine?: BodyLineMeasure;
+  /** 엉덩이–무릎–발목 각도(도) */
+  kneeAngleDeg?: number;
+  /** 어깨→엉덩이 선의 수직 기울기(도) */
+  torsoLeanDeg?: number;
+  /** 팔꿈치가 어깨 바로 아래에서 벗어난 정도(어깨–엉덩이 길이의 %) */
+  elbowOffsetPct?: number;
 }
 
 /** 같은 사진을 다시 분석하지 않도록 결과를 기억해 둔다. (결과 화면의 선과 요청 전 측정이 같은 값을 쓴다) */
@@ -173,7 +179,21 @@ export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis
     };
   };
 
-  const analysis: PoseAnalysis = { paths, ankleLine: measure("ankle"), kneeLine: measure("knee") };
+  const kneePoints = path(side.hip, side.knee, side.ankle)?.map(scale);
+  const torsoPoints = path(side.shoulder, side.hip)?.map(scale);
+  const elbowPoints = path(side.shoulder, side.elbow, side.hip)?.map(scale);
+  const analysis: PoseAnalysis = {
+    paths,
+    ankleLine: measure("ankle"),
+    kneeLine: measure("knee"),
+    kneeAngleDeg: kneePoints ? Math.round(angleAt(kneePoints[0], kneePoints[1], kneePoints[2])) : undefined,
+    torsoLeanDeg: torsoPoints
+      ? Math.round((Math.atan2(Math.abs(torsoPoints[1][0] - torsoPoints[0][0]), Math.abs(torsoPoints[1][1] - torsoPoints[0][1])) * 180) / Math.PI)
+      : undefined,
+    elbowOffsetPct: elbowPoints
+      ? Math.round((Math.abs(elbowPoints[1][0] - elbowPoints[0][0]) / (Math.hypot(elbowPoints[2][0] - elbowPoints[0][0], elbowPoints[2][1] - elbowPoints[0][1]) || 1)) * 100)
+      : undefined,
+  };
   analysisCache.set(key, analysis);
   return analysis;
 }
@@ -181,4 +201,21 @@ export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis
 /** 부위별 선 위치만 필요할 때 (결과 화면) */
 export async function findPartPaths(image: HTMLImageElement): Promise<PartPaths | null> {
   return (await analyzePose(image))?.paths ?? null;
+}
+
+/** 운동마다 판정에 필요한 측정값만 골라 돌려준다. 하나도 못 쟀으면 undefined */
+export function measurementsFor(analysis: PoseAnalysis | null, exerciseId: ExerciseId): PoseMeasurements | undefined {
+  if (!analysis) return undefined;
+  let m: PoseMeasurements;
+  if (exerciseId === "plank") {
+    m = { lineAngleDeg: analysis.ankleLine?.lineAngleDeg, hipOffsetPct: analysis.ankleLine?.hipOffsetPct, elbowOffsetPct: analysis.elbowOffsetPct };
+  } else if (exerciseId === "bridge") {
+    m = { lineAngleDeg: analysis.kneeLine?.lineAngleDeg, hipOffsetPct: analysis.kneeLine?.hipOffsetPct, kneeAngleDeg: analysis.kneeAngleDeg };
+  } else if (exerciseId === "squat" || exerciseId === "lunge") {
+    m = { torsoLeanDeg: analysis.torsoLeanDeg, kneeAngleDeg: analysis.kneeAngleDeg };
+  } else {
+    return undefined;
+  }
+  const entries = Object.entries(m).filter(([, value]) => value !== undefined);
+  return entries.length > 0 ? (Object.fromEntries(entries) as PoseMeasurements) : undefined;
 }

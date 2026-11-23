@@ -2,17 +2,17 @@
 // 통증·심한 증상·부상 부위 주의 같은 안전 안내는 AI 답변과 무관하게 lib/safety.ts의 규칙으로 코드가 붙인다. (PLAN 11번)
 
 import { getBodyLoad } from "./body";
+import { judgeForm } from "./form";
 import { detectPain, detectSevere, getInjuryParts } from "./safety";
 import type { AiAnswer } from "./schemas";
-import type { FeedbackNotices, FeedbackRequest, FeedbackResponse, OverlayItem, OverlayPart } from "./types";
+import type { FeedbackNotices, FeedbackRequest, FeedbackResponse, OverlayItem, OverlayPart, Verdict } from "./types";
 
 /** 정석(similar)일 때 초록 선으로 보여 줄 부위. AI가 따로 말하지 않은 부위는 정석과 같은 것으로 본다. */
 const GOOD_OVERLAY_PARTS: OverlayPart[] = ["arm", "back", "thigh", "shin"];
 
-/** 사진 위에 그을 부위별 결과. 정석이면 AI가 선을 주지 않아도 몸 전체를 초록으로 보여 준다. */
-function buildOverlay(answer: AiAnswer): OverlayItem[] | undefined {
-  const items = answer.overlay ?? [];
-  if (answer.verdict !== "similar") return items.length > 0 ? items : undefined;
+/** 사진 위에 그을 부위별 결과. 정석이면 따로 판정하지 않은 부위도 초록으로 채워 몸 전체를 보여 준다. */
+function buildOverlay(verdict: Verdict | undefined, items: OverlayItem[]): OverlayItem[] | undefined {
+  if (verdict !== "similar") return items.length > 0 ? items : undefined;
   const given = new Set(items.map((item) => item.part));
   return [...items, ...GOOD_OVERLAY_PARTS.filter((part) => !given.has(part)).map((part): OverlayItem => ({ part, kind: "good" }))];
 }
@@ -58,15 +58,22 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
   // 다시 촬영·불일치 확인일 때는 분석 내용을 보여 주지 않는다.
   if (answer.status !== "ok") return base;
 
+  // 몸 인식 측정값이 있으면 판정과 선(초록·빨강)은 코드가 정한 것을 쓰고, AI의 판정은 따르지 않는다.
+  const judged = judgeForm(request.exerciseId, request.measurements);
+  const verdict = judged ? judged.verdict : answer.verdict ?? undefined;
+  // 정석인데 AI가 다른 점을 적었다면 근거가 없으므로 보여 주지 않는다. (맞춤 안내 fixes는 그대로 둔다)
+  const noDifferences = judged?.verdict === "similar";
+
   return {
     ...base,
-    verdict: answer.verdict ?? undefined,
+    verdict,
     assessment: answer.assessment ?? undefined,
-    differences: withoutMeasureNumbers(request, answer.differences),
-    problemParts: withoutMeasureNumbers(request, answer.problemParts),
+    // 코드가 판정했으면 "다른 점"도 코드가 정한 문장을 그대로 쓴다. (AI가 참고 사실 등을 다른 점으로 섞어 쓰지 못하게)
+    differences: judged ? judged.issues : withoutMeasureNumbers(request, answer.differences),
+    problemParts: noDifferences ? [] : withoutMeasureNumbers(request, answer.problemParts),
     fixes: withoutMeasureNumbers(request, answer.fixes),
     memoAnswer: answer.memoAnswer ?? undefined,
-    overlay: buildOverlay(answer),
+    overlay: buildOverlay(verdict, judged ? judged.parts : answer.overlay ?? []),
     uncertain: answer.uncertain ?? undefined,
   };
 }
