@@ -83,13 +83,14 @@ function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayIte
 
   return (
     <figure className="flex flex-col gap-2">
-      <div className="relative mx-auto w-full max-w-xs overflow-hidden rounded-2xl bg-foreground/5">
+      {/* 칸이 사진 크기에 딱 맞아야 선이 몸 위에 놓인다. (세로 사진도 줄여 맞춘다) */}
+      <div className="relative mx-auto w-fit max-w-full overflow-hidden rounded-2xl bg-foreground/5">
         {/* eslint-disable-next-line @next/next/no-img-element -- 내가 올린 사진의 임시 주소라 최적화 대상이 아니다 */}
         <img
           src={photoUrl}
           alt="내가 올린 자세 사진에 정석과 비교한 선을 그어 표시한 그림"
           onLoad={handleLoad}
-          className="block max-h-[42dvh] w-full object-contain"
+          className="block h-auto max-h-[42dvh] w-auto max-w-xs"
         />
         <svg viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true" className="absolute inset-0 size-full">
           {segments.map((segment, index) => (
