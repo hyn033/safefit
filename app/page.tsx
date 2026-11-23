@@ -220,6 +220,7 @@ export default function Home() {
             onConfirmExercise={() => void sendFeedback(true)}
             onReselect={handleReselect}
             busy={checking}
+            photoUrl={previewUrl}
           />
         </>
       ) : !confirmed ? (

@@ -70,6 +70,30 @@ const textList = (maxItems: number, maxLength: number) =>
 /** 모델은 쓰지 않는 항목을 빈 글자("")로 채우기도 하므로, 빈 글자는 "없음"으로 본다. */
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 
+/** 선 하나. 좌표는 0~1 비율이어야 하고, 시작·끝이 같은 점이면 선이 아니므로 버린다. */
+const overlayLineSchema = z.object({
+  x1: z.number().min(0).max(1),
+  y1: z.number().min(0).max(1),
+  x2: z.number().min(0).max(1),
+  y2: z.number().min(0).max(1),
+  kind: z.enum(["good", "fix"]),
+  label: z.string().max(30).nullish(),
+});
+
+/**
+ * 선 목록. 모양이 틀린 선은 답변 전체를 실패시키지 않고 그 선만 버린다. (선은 덤이라 없어도 피드백은 보여 줄 수 있다)
+ * 최대 4개까지만 쓴다.
+ */
+const overlaySchema = z
+  .array(z.unknown())
+  .nullish()
+  .transform((items) =>
+    (items ?? [])
+      .map((item) => overlayLineSchema.safeParse(item))
+      .flatMap((parsed) => (parsed.success && (parsed.data.x1 !== parsed.data.x2 || parsed.data.y1 !== parsed.data.y2) ? [parsed.data] : []))
+      .slice(0, 4),
+  );
+
 export const aiAnswerSchema = z
   .object({
     status: z.enum(["ok", "retake", "mismatch"]),
@@ -79,6 +103,7 @@ export const aiAnswerSchema = z
     problemParts: textList(6, 100),
     fixes: textList(3, 300),
     memoAnswer: optionalText(600),
+    overlay: overlaySchema,
     uncertain: z.boolean().nullish(),
   })
   .superRefine((answer, ctx) => {

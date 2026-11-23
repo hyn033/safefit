@@ -90,11 +90,12 @@ interface AnswerTexts {
   problemParts?: string[] | null;
   fixes?: string[] | null;
   memoAnswer?: string | null;
+  overlay?: { label?: string | null }[] | null;
 }
 
 /** 답변 안에 문제 표현이 하나라도 있으면 true */
 export function answerHasBannedExpression(answer: AnswerTexts): boolean {
-  const texts = [answer.assessment ?? "", ...(answer.differences ?? []), ...(answer.problemParts ?? []), ...(answer.fixes ?? []), answer.memoAnswer ?? ""];
+  const texts = [answer.assessment ?? "", ...(answer.differences ?? []), ...(answer.problemParts ?? []), ...(answer.fixes ?? []), answer.memoAnswer ?? "", ...(answer.overlay ?? []).map((line) => line.label ?? "")];
   return texts.some(hasBannedExpression);
 }
 
@@ -109,5 +110,7 @@ export function removeBannedExpressions<T extends AnswerTexts>(answer: T): T {
     fixes: keep(answer.fixes),
     // 질문 답변에 문제 표현이 있으면 답변 전체를 지운다. (일부만 남기면 뜻이 어긋날 수 있다)
     memoAnswer: answer.memoAnswer && hasBannedExpression(answer.memoAnswer) ? null : answer.memoAnswer,
+    // 선 설명에 문제 표현이 있으면 그 선만 지운다.
+    overlay: answer.overlay ? answer.overlay.filter((line) => !hasBannedExpression(line.label ?? "")) : answer.overlay,
   };
 }

@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import type { ExerciseGuide } from "@/lib/exercises";
-import type { FeedbackResponse, Verdict } from "@/lib/types";
+import type { FeedbackResponse, OverlayLine, Verdict } from "@/lib/types";
 
 const VERDICT_LABELS: Record<Verdict, string> = {
   similar: "정석과 거의 같음",
@@ -50,6 +50,60 @@ function Section({ title, items, numbered = false }: { title: string; items?: st
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * 내가 올린 사진 위에 AI가 짚은 선을 겹쳐 그린다. (사진은 이 화면 안에서만 쓰고 저장하지 않는다)
+ * 좌표는 0~1 비율이라 사진 크기가 달라도 같은 자리에 그려진다.
+ */
+function PhotoOverlay({ photoUrl, lines }: { photoUrl: string; lines: OverlayLine[] }) {
+  return (
+    <figure className="flex flex-col gap-2">
+      <div className="relative mx-auto w-full max-w-xs overflow-hidden rounded-2xl bg-foreground/5">
+        {/* eslint-disable-next-line @next/next/no-img-element -- 내가 올린 사진의 임시 주소라 최적화 대상이 아니다 */}
+        <img src={photoUrl} alt="내가 올린 자세 사진에 선을 그어 표시한 그림" className="block max-h-[42dvh] w-full object-contain" />
+        <svg viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true" className="absolute inset-0 size-full">
+          {lines.map((line, index) => (
+            <line
+              key={index}
+              x1={line.x1}
+              y1={line.y1}
+              x2={line.x2}
+              y2={line.y2}
+              stroke={line.kind === "good" ? "#22c55e" : "#f97316"}
+              strokeWidth={4}
+              strokeLinecap="round"
+              strokeDasharray={line.kind === "good" ? undefined : "0.001 0.03"}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </svg>
+        {lines.map(
+          (line, index) =>
+            line.label && (
+              <span
+                key={index}
+                aria-hidden="true"
+                style={{ left: `${((line.x1 + line.x2) / 2) * 100}%`, top: `${((line.y1 + line.y2) / 2) * 100}%` }}
+                className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-white ${line.kind === "good" ? "bg-green-600" : "bg-orange-600"}`}
+              >
+                {line.label}
+              </span>
+            ),
+        )}
+      </div>
+      <figcaption className="text-center text-xs text-foreground/70">
+        <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 잘 된 곳,{" "}
+        <span className="font-semibold text-orange-700 dark:text-orange-400">주황</span>은 고치면 좋은 곳이에요. AI가 대략 표시한 거라 위치가 어긋날 수 있어요.
+      </figcaption>
+      {/* 선 정보는 눈으로만 볼 수 있으므로 같은 내용을 글로도 남긴다. */}
+      <ul className="sr-only">
+        {lines.filter((line) => line.label).map((line, index) => (
+          <li key={index}>{line.kind === "good" ? "잘 된 곳" : "고치면 좋은 곳"}: {line.label}</li>
+        ))}
+      </ul>
+    </figure>
   );
 }
 
@@ -109,9 +163,11 @@ interface FeedbackResultProps {
   /** 운동·사진 불일치에서 "아니요, 운동 다시 고를게요" */
   onReselect: () => void;
   busy: boolean;
+  /** 사용자가 올린 사진의 임시 주소 (선을 겹쳐 그리는 데 쓴다) */
+  photoUrl?: string | null;
 }
 
-export default function FeedbackResult({ result, guide, onConfirmExercise, onReselect, busy }: FeedbackResultProps) {
+export default function FeedbackResult({ result, guide, onConfirmExercise, onReselect, busy, photoUrl }: FeedbackResultProps) {
   const { notices } = result;
   const isSevere = result.status === "severe";
 
@@ -165,6 +221,7 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
 
       {result.status === "ok" && (
         <>
+          {photoUrl && result.overlay && result.overlay.length > 0 && <PhotoOverlay photoUrl={photoUrl} lines={result.overlay} />}
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               {result.verdict && (

@@ -46,6 +46,7 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
     problemParts: answer.problemParts ?? undefined,
     fixes: answer.fixes ?? undefined,
     memoAnswer: answer.memoAnswer ?? undefined,
+    overlay: answer.overlay && answer.overlay.length > 0 ? answer.overlay.map((line) => ({ ...line, label: line.label ?? undefined })) : undefined,
     uncertain: answer.uncertain ?? undefined,
   };
 }
