@@ -1,7 +1,10 @@
+"use client";
+
 // Design Ref: §5.3 홈 화면의 결과 영역 — 피드백 결과를 보여 준다. (PLAN 12번)
-// 다시 촬영·운동 불일치 확인의 자세한 흐름은 PLAN 13번, 평가는 PLAN 15번에서 이어서 만든다.
+// 다시 촬영·운동 불일치 확인은 PLAN 13번, "도움이 됐나요?" 평가는 PLAN 15번에서 만들었다.
 // 안내 문구(AI 주의·의료 아님·통증·부상 부위·심한 증상)는 코드가 붙인 notices를 보고 보여 준다.
 
+import { useState } from "react";
 import type { ExerciseGuide } from "@/lib/exercises";
 import type { FeedbackResponse, Verdict } from "@/lib/types";
 
@@ -42,6 +45,44 @@ export function PainNotice() {
     <p className="rounded-lg border border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
       통증이 있다면 운동을 멈추세요. 계속되면 전문가와 상담하세요.
     </p>
+  );
+}
+
+const RATING_LABELS = ["전혀 도움이 안 됐어요", "별로 도움이 안 됐어요", "보통이에요", "도움이 됐어요", "매우 도움이 됐어요"];
+
+/**
+ * "도움이 됐나요?" 5점 평가. 평가는 이 화면에서만 받고 저장하거나 보내지 않는다. (Design Ref: §3)
+ * 새 결과가 나오면 결과 영역이 다시 만들어지므로 선택도 처음 상태로 돌아간다.
+ */
+function RatingPrompt() {
+  const [rating, setRating] = useState(0);
+  return (
+    <div className="flex flex-col gap-2">
+      <p id="rating-label" className="text-sm font-medium">도움이 됐나요?</p>
+      <div role="radiogroup" aria-labelledby="rating-label" className="flex gap-1">
+        {RATING_LABELS.map((label, index) => {
+          const value = index + 1;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={rating === value}
+              aria-label={`${value}점 ${label}`}
+              onClick={() => setRating(value)}
+              className={`min-h-11 min-w-11 rounded-lg text-2xl ${value <= rating ? "text-amber-500" : "text-foreground/30"}`}
+            >
+              <span aria-hidden="true">{value <= rating ? "★" : "☆"}</span>
+            </button>
+          );
+        })}
+      </div>
+      {rating > 0 && (
+        <p role="status" className="text-sm text-foreground/70">
+          {rating}점을 선택했어요. 고마워요! (평가는 저장되지 않아요.)
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -141,6 +182,7 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
       )}
       <p className="text-xs text-foreground/70">{AI_CAUTION_TEXT}</p>
       <p className="text-xs text-foreground/70">참고용 자세 안내이며 의료 진단이 아닙니다.</p>
+      {result.status === "ok" && <RatingPrompt />}
     </section>
   );
 }
