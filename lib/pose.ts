@@ -1,11 +1,8 @@
 // 사진 속 몸의 관절 위치를 브라우저에서 찾는다. (MediaPipe 포즈 모델)
 // 사진은 서버로 따로 보내지 않고 이 브라우저 안에서만 처리한다. 모델·실행 파일은 우리 사이트(public/mediapipe)에서 받는다.
 // 브라우저에서만 쓴다. (서버 코드에서 불러오지 않는다)
-//
-// 자세 판정 방법: 정석 예시 사진에서도 같은 몸 인식을 돌려 "정석의 선"을 얻고,
-// 내 사진의 선과 부위별로 각도를 비교한다. (비교 결과로 같으면 초록, 다르면 빨강은 lib/form.ts가 정한다)
 
-import type { OverlayPart, PoseComparison } from "./types";
+import type { ExerciseId, OverlayPart, PoseMeasurements } from "./types";
 
 /** 사진 전체를 0~1로 본 점 위치 */
 export type Point = [number, number];
@@ -48,20 +45,11 @@ function loadLandmarker(): Promise<Landmarker> {
     landmarkerPromise = (async () => {
       const { FilesetResolver, PoseLandmarker } = await import("@mediapipe/tasks-vision");
       const fileset = await FilesetResolver.forVisionTasks("/mediapipe/wasm");
-      const original = console.error;
-      console.error = (...args: unknown[]) => {
-        if (typeof args[0] === "string" && args[0].startsWith("INFO:")) return;
-        original(...args);
-      };
-      try {
-        return await PoseLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: "/mediapipe/pose_landmarker_lite.task", delegate: "CPU" },
-          runningMode: "IMAGE",
-          numPoses: 1,
-        });
-      } finally {
-        console.error = original;
-      }
+      return withoutInfoLogsAsync(() => PoseLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: "/mediapipe/pose_landmarker_lite.task", delegate: "CPU" },
+        runningMode: "IMAGE",
+        numPoses: 1,
+      }));
     })();
     landmarkerPromise.catch(() => {
       landmarkerPromise = null;
@@ -70,36 +58,76 @@ function loadLandmarker(): Promise<Landmarker> {
   return landmarkerPromise;
 }
 
-/** 몸 인식 모델을 미리 불러와 둔다. (처음 쓸 때 15MB 가까이 내려받느라 비교가 늦어지지 않게, 화면을 열 때 호출한다) */
-export function warmUpPose(): void {
-  loadLandmarker().catch(() => {});
+/** 위와 같지만 비동기 작업이 끝날 때까지 걸러 낸다. */
+async function withoutInfoLogsAsync<T>(run: () => Promise<T>): Promise<T> {
+  const original = console.error;
+  console.error = (...args: unknown[]) => {
+    if (typeof args[0] === "string" && args[0].startsWith("INFO:")) return;
+    original(...args);
+  };
+  try {
+    return await run();
+  } finally {
+    console.error = original;
+  }
 }
 
-/** 부위를 이루는 관절 이름들 (이어진 순서대로). 팔은 어깨–팔꿈치–손목 */
-const PART_JOINTS: Record<OverlayPart, (keyof typeof LEFT)[]> = {
-  arm: ["shoulder", "elbow", "wrist"],
-  back: ["shoulder", "hip"],
-  thigh: ["hip", "knee"],
-  shin: ["knee", "ankle"],
-  neck: ["ear", "shoulder"],
-};
-
-/** 비교에 쓰는 부위: 등과 다리. (팔 위치는 자세 판정에 중요하지 않아 비교하지 않고, 목은 선만 그린다) */
-const COMPARED_PARTS: OverlayPart[] = ["back", "thigh", "shin"];
+/**
+ * 몸 모양 측정값. (몸의 중심선이 얼마나 곧은지)
+ * - lineAngleDeg: 어깨–엉덩이–(발목 또는 무릎)이 이루는 각도. 180도에 가까울수록 일직선이다.
+ * - hipOffsetPct: 엉덩이가 어깨–(발목 또는 무릎)을 이은 선에서 얼마나 벗어났는지. 선 길이의 %이고, +이면 엉덩이가 선보다 아래(처짐), -이면 위(솟음)이다.
+ */
+export interface BodyLineMeasure {
+  /** 기준으로 삼은 끝 관절: 플랭크는 발목, 브릿지는 무릎 */
+  reference: "ankle" | "knee";
+  lineAngleDeg: number;
+  hipOffsetPct: number;
+}
 
 /** 사진 한 장을 분석한 결과 */
 export interface PoseAnalysis {
-  /** 사진 위에 그릴 부위별 선 위치 (0~1) */
   paths: PartPaths;
-  /** 부위별 마디의 기울어진 각도(도). 사진의 가로·세로 비율을 반영한 픽셀 좌표 기준이고 팔은 마디가 2개다. */
-  angles: Partial<Record<OverlayPart, number[]>>;
+  /** 어깨–엉덩이–발목 기준 측정값 (관절이 안 보이면 없음) */
+  ankleLine?: BodyLineMeasure;
+  /** 어깨–엉덩이–무릎 기준 측정값 (관절이 안 보이면 없음) */
+  kneeLine?: BodyLineMeasure;
+  /** 엉덩이–무릎–발목 각도(도) */
+  kneeAngleDeg?: number;
+  /** 어깨→엉덩이 선의 수직 기울기(도) */
+  torsoLeanDeg?: number;
+  /** 팔꿈치가 어깨 바로 아래에서 벗어난 정도(어깨–엉덩이 길이의 %) */
+  elbowOffsetPct?: number;
 }
 
-/** 같은 사진을 다시 분석하지 않도록 결과를 기억해 둔다. (정석 사진, 요청 전 비교, 결과 화면의 선이 같은 값을 쓴다) */
+/** 같은 사진을 다시 분석하지 않도록 결과를 기억해 둔다. (결과 화면의 선과 요청 전 측정이 같은 값을 쓴다) */
 const analysisCache = new Map<string, PoseAnalysis | null>();
 
+/** 세 점 a–b–c에서 b의 각도(도). 점은 사진 비율을 반영한 픽셀 단위여야 한다. */
+function angleAt(a: Point, b: Point, c: Point): number {
+  const v1 = [a[0] - b[0], a[1] - b[1]];
+  const v2 = [c[0] - b[0], c[1] - b[1]];
+  const dot = v1[0] * v2[0] + v1[1] * v2[1];
+  const len = Math.hypot(v1[0], v1[1]) * Math.hypot(v2[0], v2[1]);
+  if (len === 0) return 180;
+  return (Math.acos(Math.max(-1, Math.min(1, dot / len))) * 180) / Math.PI;
+}
+
+/** 어깨(a)–끝(c)을 이은 선에서 엉덩이(b)가 벗어난 정도(선 길이의 %). 엉덩이가 선보다 아래면 +, 위면 -. */
+function hipOffset(a: Point, b: Point, c: Point): number {
+  const dx = c[0] - a[0];
+  const dy = c[1] - a[1];
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return 0;
+  // 엉덩이 x 위치에서의 선 높이(y)와 비교한다. (사진에서 아래쪽이 y가 크다)
+  const lineY = dx === 0 ? a[1] : a[1] + (dy * (b[0] - a[0])) / dx;
+  const vertical = b[1] - lineY;
+  // 선이 기울어 있어도 수직 거리로 바꿔 선 길이에 대한 비율로 나타낸다.
+  const perpendicular = dx === 0 ? 0 : (vertical * Math.abs(dx)) / len;
+  return Math.round((perpendicular / len) * 1000) / 10;
+}
+
 /**
- * 사진에서 몸을 찾아 부위별 선 위치와 마디 각도를 돌려준다. 몸을 찾지 못하면 null.
+ * 사진에서 몸을 찾아 부위별 선 위치와 몸 중심선 측정값을 돌려준다. 몸을 찾지 못하면 null.
  * 옆모습 사진이 많아서, 더 잘 보이는 쪽(왼쪽/오른쪽) 몸을 쓴다.
  */
 export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis | null> {
@@ -121,23 +149,51 @@ export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis
     if (!landmark || (landmark.visibility ?? 0) < MIN_VISIBILITY) return null;
     return [landmark.x, landmark.y];
   };
+  const path = (...indexes: number[]): Point[] | undefined => {
+    const points = indexes.map(point);
+    return points.every((p): p is Point => p !== null) ? (points as Point[]) : undefined;
+  };
 
-  const paths: PartPaths = {};
-  const angles: PoseAnalysis["angles"] = {};
-  for (const part of Object.keys(PART_JOINTS) as OverlayPart[]) {
-    const points = PART_JOINTS[part].map((joint) => point(side[joint]));
-    if (!points.every((p): p is Point => p !== null)) continue;
-    paths[part] = points;
-    // 각도는 사진의 가로·세로 비율을 반영한 픽셀 좌표로 계산한다. (y는 아래쪽이 크다)
-    const pixels = points.map((p): Point => [p[0] * image.naturalWidth, p[1] * image.naturalHeight]);
-    angles[part] = pixels.slice(1).map((p, index) => (Math.atan2(p[1] - pixels[index][1], p[0] - pixels[index][0]) * 180) / Math.PI);
-  }
-  if (Object.keys(paths).length === 0) {
+  const paths: PartPaths = {
+    arm: path(side.shoulder, side.elbow, side.wrist),
+    back: path(side.shoulder, side.hip),
+    thigh: path(side.hip, side.knee),
+    shin: path(side.knee, side.ankle),
+    neck: path(side.ear, side.shoulder),
+  };
+  if (!Object.values(paths).some(Boolean)) {
     analysisCache.set(key, null);
     return null;
   }
 
-  const analysis: PoseAnalysis = { paths, angles };
+  // 각도는 사진의 가로·세로 비율을 반영한 픽셀 좌표로 계산한다.
+  const scale = (p: Point): Point => [p[0] * image.naturalWidth, p[1] * image.naturalHeight];
+  const measure = (reference: "ankle" | "knee"): BodyLineMeasure | undefined => {
+    const points = path(side.shoulder, side.hip, side[reference]);
+    if (!points) return undefined;
+    const [shoulder, hip, end] = points.map(scale);
+    return {
+      reference,
+      lineAngleDeg: Math.round(angleAt(shoulder, hip, end)),
+      hipOffsetPct: hipOffset(shoulder, hip, end),
+    };
+  };
+
+  const kneePoints = path(side.hip, side.knee, side.ankle)?.map(scale);
+  const torsoPoints = path(side.shoulder, side.hip)?.map(scale);
+  const elbowPoints = path(side.shoulder, side.elbow, side.hip)?.map(scale);
+  const analysis: PoseAnalysis = {
+    paths,
+    ankleLine: measure("ankle"),
+    kneeLine: measure("knee"),
+    kneeAngleDeg: kneePoints ? Math.round(angleAt(kneePoints[0], kneePoints[1], kneePoints[2])) : undefined,
+    torsoLeanDeg: torsoPoints
+      ? Math.round((Math.atan2(Math.abs(torsoPoints[1][0] - torsoPoints[0][0]), Math.abs(torsoPoints[1][1] - torsoPoints[0][1])) * 180) / Math.PI)
+      : undefined,
+    elbowOffsetPct: elbowPoints
+      ? Math.round((Math.abs(elbowPoints[1][0] - elbowPoints[0][0]) / (Math.hypot(elbowPoints[2][0] - elbowPoints[0][0], elbowPoints[2][1] - elbowPoints[0][1]) || 1)) * 100)
+      : undefined,
+  };
   analysisCache.set(key, analysis);
   return analysis;
 }
@@ -147,37 +203,19 @@ export async function findPartPaths(image: HTMLImageElement): Promise<PartPaths 
   return (await analyzePose(image))?.paths ?? null;
 }
 
-/** 두 각도의 차이(0~180도) */
-function angleGap(a: number, b: number): number {
-  const diff = Math.abs(a - b) % 360;
-  return diff > 180 ? 360 - diff : diff;
-}
-
-/** 좌우를 뒤집은 각도 (사진 속 사람이 반대 방향을 보고 있을 때) */
-function mirror(angle: number): number {
-  return 180 - angle;
-}
-
-/**
- * 내 사진의 선을 정석 사진의 선과 부위별로 비교해, 부위마다 각도가 얼마나 다른지 돌려준다.
- * 사진 속 사람이 보는 방향이 반대일 수 있어서, 그대로 비교한 것과 좌우를 뒤집어 비교한 것 중 더 비슷한 쪽을 쓴다.
- * 양쪽 사진에서 모두 찾은 부위가 2개 미만이면 비교할 수 없으므로 null이다.
- */
-export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnalysis | null): PoseComparison | null {
-  if (!user || !standard) return null;
-  const common = COMPARED_PARTS.filter((part) => user.angles[part] && standard.angles[part]);
-  if (common.length < 2) return null;
-
-  const gaps = (flip: boolean) =>
-    common.map((part) => {
-      const mine = user.angles[part] as number[];
-      const ref = standard.angles[part] as number[];
-      return Math.max(...mine.map((angle, index) => angleGap(flip ? mirror(angle) : angle, ref[index])));
-    });
-  const straight = gaps(false);
-  const flipped = gaps(true);
-  const total = (list: number[]) => list.reduce((sum, value) => sum + value, 0);
-  const best = total(flipped) < total(straight) ? flipped : straight;
-
-  return { parts: common.map((part, index) => ({ part, deltaDeg: Math.round(best[index]) })) };
+/** 운동마다 판정에 필요한 측정값만 골라 돌려준다. 하나도 못 쟀으면 undefined */
+export function measurementsFor(analysis: PoseAnalysis | null, exerciseId: ExerciseId): PoseMeasurements | undefined {
+  if (!analysis) return undefined;
+  let m: PoseMeasurements;
+  if (exerciseId === "plank") {
+    m = { lineAngleDeg: analysis.ankleLine?.lineAngleDeg, hipOffsetPct: analysis.ankleLine?.hipOffsetPct, elbowOffsetPct: analysis.elbowOffsetPct };
+  } else if (exerciseId === "bridge") {
+    m = { lineAngleDeg: analysis.kneeLine?.lineAngleDeg, hipOffsetPct: analysis.kneeLine?.hipOffsetPct, kneeAngleDeg: analysis.kneeAngleDeg };
+  } else if (exerciseId === "squat" || exerciseId === "lunge") {
+    m = { torsoLeanDeg: analysis.torsoLeanDeg, kneeAngleDeg: analysis.kneeAngleDeg };
+  } else {
+    return undefined;
+  }
+  const entries = Object.entries(m).filter(([, value]) => value !== undefined);
+  return entries.length > 0 ? (Object.fromEntries(entries) as PoseMeasurements) : undefined;
 }

@@ -2,19 +2,26 @@
 // 통증·심한 증상·부상 부위 주의 같은 안전 안내는 AI 답변과 무관하게 lib/safety.ts의 규칙으로 코드가 붙인다. (PLAN 11번)
 
 import { getBodyLoad } from "./body";
-import { judgeComparison } from "./form";
+import { judgeForm } from "./form";
 import { detectPain, detectSevere, getInjuryParts } from "./safety";
 import type { AiAnswer } from "./schemas";
 import type { FeedbackNotices, FeedbackRequest, FeedbackResponse, OverlayItem, OverlayPart, Verdict } from "./types";
 
 /** 정석(similar)일 때 초록 선으로 보여 줄 부위. AI가 따로 말하지 않은 부위는 정석과 같은 것으로 본다. */
-const GOOD_OVERLAY_PARTS: OverlayPart[] = ["back", "thigh", "shin"];
+const GOOD_OVERLAY_PARTS: OverlayPart[] = ["arm", "back", "thigh", "shin"];
+
+/** 팔을 보지 않는 운동: 스쿼트·런지는 팔 위치가 자세와 상관없어서 팔 선을 긋지 않는다. */
+function ignoresArm(exerciseId: FeedbackRequest["exerciseId"]): boolean {
+  return exerciseId === "squat" || exerciseId === "lunge";
+}
 
 /** 사진 위에 그을 부위별 결과. 정석이면 따로 판정하지 않은 부위도 초록으로 채워 몸 전체를 보여 준다. */
-function buildOverlay(verdict: Verdict | undefined, items: OverlayItem[]): OverlayItem[] | undefined {
+function buildOverlay(exerciseId: FeedbackRequest["exerciseId"], verdict: Verdict | undefined, rawItems: OverlayItem[]): OverlayItem[] | undefined {
+  const items = ignoresArm(exerciseId) ? rawItems.filter((item) => item.part !== "arm") : rawItems;
   if (verdict !== "similar") return items.length > 0 ? items : undefined;
   const given = new Set(items.map((item) => item.part));
-  return [...items, ...GOOD_OVERLAY_PARTS.filter((part) => !given.has(part)).map((part): OverlayItem => ({ part, kind: "good" }))];
+  const fill = GOOD_OVERLAY_PARTS.filter((part) => !given.has(part) && !(part === "arm" && ignoresArm(exerciseId)));
+  return [...items, ...fill.map((part): OverlayItem => ({ part, kind: "good" }))];
 }
 
 /** 코드가 항상 붙이는 안내. AI 주의·의료 아님은 항상, 통증·심한 증상·부상 부위는 해당할 때만 붙인다. */
@@ -39,12 +46,12 @@ export function toSevereResponse(request: FeedbackRequest): FeedbackResponse {
 }
 
 /** 측정 숫자(각도 도, 퍼센트)가 그대로 들어간 문장 */
-const MEASURE_NUMBER = /d+(?:.d+)?s*(?:도|%|퍼센트)/;
+const MEASURE_NUMBER = /[0-9]+(?:[.][0-9]+)?[ ]*(?:도|%|퍼센트)/;
 
-/** 비교 결과를 보낸 요청이면, AI가 각도 숫자를 그대로 쓴 문장은 화면에 보이지 않게 뺀다. (정밀한 숫자는 말하지 않는 규칙) */
+/** 측정값을 보낸 요청이면, AI가 측정 숫자를 그대로 쓴 문장은 화면에 보이지 않게 뺀다. (정밀한 숫자는 말하지 않는 규칙) */
 function withoutMeasureNumbers(request: FeedbackRequest, items: string[] | null | undefined): string[] | undefined {
   if (!items) return undefined;
-  return request.comparison ? items.filter((item) => !MEASURE_NUMBER.test(item)) : items;
+  return request.measurements ? items.filter((item) => !MEASURE_NUMBER.test(item)) : items;
 }
 
 export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): FeedbackResponse {
@@ -58,8 +65,8 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
   // 다시 촬영·불일치 확인일 때는 분석 내용을 보여 주지 않는다.
   if (answer.status !== "ok") return base;
 
-  // 정석 사진과의 몸 선 비교 결과가 있으면 판정과 선(초록·빨강)은 코드가 정한 것을 쓰고, AI의 판정은 따르지 않는다.
-  const judged = judgeComparison(request.comparison);
+  // 몸 인식 측정값이 있으면 판정과 선(초록·빨강)은 코드가 정한 것을 쓰고, AI의 판정은 따르지 않는다.
+  const judged = judgeForm(request.exerciseId, request.measurements, request.profile);
   const verdict = judged ? judged.verdict : answer.verdict ?? undefined;
   // 정석인데 AI가 다른 점을 적었다면 근거가 없으므로 보여 주지 않는다. (맞춤 안내 fixes는 그대로 둔다)
   const noDifferences = judged?.verdict === "similar";
@@ -73,7 +80,7 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
     problemParts: noDifferences ? [] : withoutMeasureNumbers(request, answer.problemParts),
     fixes: withoutMeasureNumbers(request, answer.fixes),
     memoAnswer: answer.memoAnswer ?? undefined,
-    overlay: judged ? (judged.parts.length > 0 ? judged.parts : undefined) : buildOverlay(verdict, answer.overlay ?? []),
+    overlay: buildOverlay(request.exerciseId, verdict, judged ? judged.parts : answer.overlay ?? []),
     uncertain: answer.uncertain ?? undefined,
   };
 }
