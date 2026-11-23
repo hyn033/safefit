@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-label="플랭크 예시: 자세를 잡고 버티는 중간과 카메라 위치">
+  <rect width="320" height="240" rx="12" fill="#f4f7fb"/>
+  <line x1="20" y1="200" x2="300" y2="200" stroke="#9aa5b1" stroke-width="3" stroke-linecap="round"/>
+  <!-- 찍을 자세 (옆모습, 오른쪽 아래를 봄) -->
+  <g stroke="#1f3a5f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <circle cx="48" cy="148" r="13" fill="#1f3a5f"/>
+    <line x1="64" y1="158" x2="226" y2="190"/>
+    <line x1="72" y1="162" x2="72" y2="196" stroke-width="6"/>
+    <line x1="72" y1="196" x2="100" y2="196" stroke-width="6"/>
+    <line x1="226" y1="190" x2="236" y2="198"/>
+  </g>
+  <!-- 카메라 (옆, 몸 높이 가까이) -->
+  <g>
+    <rect x="262" y="150" width="34" height="32" rx="5" fill="#e07a1f"/>
+    <circle cx="272" cy="166" r="8" fill="#fff"/>
+    <circle cx="272" cy="166" r="4" fill="#e07a1f"/>
+    <line x1="279" y1="182" x2="279" y2="200" stroke="#e07a1f" stroke-width="3"/>
+    <line x1="262" y1="166" x2="244" y2="170" stroke="#e07a1f" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="150" y="130" font-size="13" fill="#e07a1f" font-family="sans-serif" font-weight="bold" text-anchor="middle">2~3m</text>
+  </g>
+  <text x="160" y="228" font-size="13" fill="#1f3a5f" font-family="sans-serif" text-anchor="middle">자세를 잡고 버티는 중간 · 옆에서 전신</text>
+</svg>
