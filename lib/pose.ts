@@ -5,6 +5,7 @@
 // 자세 판정 방법: 정석 예시 사진에서도 같은 몸 인식을 돌려 "정석의 선"을 얻고,
 // 내 사진의 선과 부위별로 각도를 비교한다. (비교 결과로 같으면 초록, 다르면 빨강은 lib/form.ts가 정한다)
 
+import { SAME_WITHIN_DEG } from "./form";
 import type { OverlayPart, PoseComparison } from "./types";
 
 /** 사진 전체를 0~1로 본 점 위치 */
@@ -93,8 +94,6 @@ export interface PoseAnalysis {
   paths: PartPaths;
   /** 부위별 마디의 기울어진 각도(도). 사진의 가로·세로 비율을 반영한 픽셀 좌표 기준이고 팔은 마디가 2개다. */
   angles: Partial<Record<OverlayPart, number[]>>;
-  /** 사진의 가로·세로 크기(픽셀). 정석 선을 내 사진에 맞춰 얹을 때 쓴다. */
-  size: [number, number];
 }
 
 /** 같은 사진을 다시 분석하지 않도록 결과를 기억해 둔다. (정석 사진, 요청 전 비교, 결과 화면의 선이 같은 값을 쓴다) */
@@ -139,7 +138,7 @@ export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis
     return null;
   }
 
-  const analysis: PoseAnalysis = { paths, angles, size: [image.naturalWidth, image.naturalHeight] };
+  const analysis: PoseAnalysis = { paths, angles };
   analysisCache.set(key, analysis);
   return analysis;
 }
@@ -163,82 +162,63 @@ function mirror(angle: number): number {
   return 180 - angle;
 }
 
-/**
- * 내 사진의 선을 정석 사진의 선과 부위별로 비교해, 부위마다 각도가 얼마나 다른지 돌려준다.
- * 사진 속 사람이 보는 방향이 반대일 수 있어서, 그대로 비교한 것과 좌우를 뒤집어 비교한 것 중 더 비슷한 쪽을 쓴다.
- * 양쪽 사진에서 모두 찾은 부위가 2개 미만이면 비교할 수 없으므로 null이다.
- */
-export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnalysis | null): PoseComparison | null {
-  const aligned = alignToStandard(user, standard);
-  if (!aligned) return null;
-  return { parts: aligned.common.map((part, index) => ({ part, deltaDeg: Math.round(aligned.gaps[index]) })) };
+/** 부호 있는 각도 차이를 -180~180도로 맞춘다. (꺾인 방향까지 비교할 때 쓴다) */
+function wrap(angle: number): number {
+  let value = angle % 360;
+  if (value > 180) value -= 360;
+  if (value <= -180) value += 360;
+  return value;
 }
 
 /**
- * 내 사진과 정석 사진에서 모두 찾은 부위(등·다리)와, 그 부위별 각도 차이를 구한다.
- * 보는 방향이 반대일 수 있어서 그대로와 좌우 반전 중 더 비슷한 쪽을 쓰고, 반전했는지(flipped)도 알려 준다.
- * 모두 찾은 부위가 2개 미만이면 null이다.
+ * 이어진 두 부위가 만나는 관절: 엉덩이(등–허벅지), 무릎(허벅지–정강이).
+ * 마디마다 각도가 조금씩만 달라도 관절 한 곳이 꺾여 있으면 몸 모양이 달라 보이므로(예: 플랭크에서 엉덩이가 솟음), 꺾인 정도도 정석과 비교한다.
  */
-function alignToStandard(
-  user: PoseAnalysis | null,
-  standard: PoseAnalysis | null,
-): { common: OverlayPart[]; gaps: number[]; flipped: boolean } | null {
+const JOINTS: [OverlayPart, OverlayPart][] = [
+  ["back", "thigh"],
+  ["thigh", "shin"],
+];
+
+/** 관절이 꺾인 정도가 정석과 이만큼(도)까지 다르면 같은 것으로 본다. */
+export const BEND_SAME_DEG = 12;
+
+/**
+ * 내 사진의 선을 정석 사진의 선과 부위별로 비교해, 부위마다 얼마나 다른지 돌려준다.
+ * 사진 속 사람이 보는 방향이 반대일 수 있어서, 그대로 비교한 것과 좌우를 뒤집어 비교한 것 중 더 비슷한 쪽을 쓴다.
+ * 각 부위의 각도 차이와, 이어진 관절(엉덩이·무릎)이 꺾인 정도의 차이를 함께 본다. 관절 꺾임이 다르면 그 관절에 닿은 두 부위가 다른 것으로 친다.
+ * 양쪽 사진에서 모두 찾은 부위가 2개 미만이면 비교할 수 없으므로 null이다.
+ */
+export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnalysis | null): PoseComparison | null {
   if (!user || !standard) return null;
   const common = COMPARED_PARTS.filter((part) => user.angles[part] && standard.angles[part]);
   if (common.length < 2) return null;
 
-  const gapsFor = (flip: boolean) =>
-    common.map((part) => {
-      const mine = user.angles[part] as number[];
-      const ref = standard.angles[part] as number[];
-      return Math.max(...mine.map((angle, index) => angleGap(flip ? mirror(angle) : angle, ref[index])));
-    });
+  const mineAngle = (part: OverlayPart, flip: boolean) => {
+    const angle = (user.angles[part] as number[])[0];
+    return flip ? mirror(angle) : angle;
+  };
+  const refAngle = (part: OverlayPart) => (standard.angles[part] as number[])[0];
+
+  const gapsFor = (flip: boolean) => common.map((part) => angleGap(mineAngle(part, flip), refAngle(part)));
   const straight = gapsFor(false);
   const flipped = gapsFor(true);
   const total = (list: number[]) => list.reduce((sum, value) => sum + value, 0);
-  const useFlip = total(flipped) < total(straight);
-  return { common, gaps: useFlip ? flipped : straight, flipped: useFlip };
-}
+  const flip = total(flipped) < total(straight);
+  const gaps = flip ? flipped : straight;
 
-/** 점 목록의 마디 길이를 모두 더한다. */
-function pathLength(points: Point[]): number {
-  return points.slice(1).reduce((sum, p, index) => sum + Math.hypot(p[0] - points[index][0], p[1] - points[index][1]), 0);
-}
-
-/**
- * 정석 사진의 몸 선(등·허벅지·정강이)을 내 사진 위에 얹을 위치로 바꿔 돌려준다. 못 만들면 null.
- * 선의 모양은 정석 사진에서 그대로 가져오고, 내 사진에는 크기와 위치만 맞춘다.
- * - 크기: 내 몸 선의 전체 길이와 같아지게 줄이거나 늘린다.
- * - 위치: 발에 가까운 끝점(보통 발목)을 내 사진의 같은 끝점에 맞춘다. (서 있거나 엎드릴 때 발은 바닥에 붙어 있다)
- * - 방향: 사진 속 사람이 보는 방향이 반대면 정석 선을 좌우로 뒤집는다.
- */
-export function placeStandardOnUser(user: PoseAnalysis | null, standard: PoseAnalysis | null): PartPaths | null {
-  const aligned = alignToStandard(user, standard);
-  if (!user || !standard || !aligned) return null;
-  const { common, flipped } = aligned;
-
-  const pixels = (analysis: PoseAnalysis, part: OverlayPart): Point[] =>
-    (analysis.paths[part] as Point[]).map((p): Point => [p[0] * analysis.size[0] * (analysis === standard && flipped ? -1 : 1), p[1] * analysis.size[1]]);
-
-  const userChain = common.flatMap((part) => pixels(user, part));
-  const standardChain = common.flatMap((part) => pixels(standard, part));
-  const userLength = common.reduce((sum, part) => sum + pathLength(pixels(user, part)), 0);
-  const standardLength = common.reduce((sum, part) => sum + pathLength(pixels(standard, part)), 0);
-  if (userLength === 0 || standardLength === 0) return null;
-  const scale = userLength / standardLength;
-
-  // 가장 마지막 부위의 끝점(발에 가까운 쪽)을 기준점으로 삼는다.
-  const userAnchor = userChain[userChain.length - 1];
-  const standardAnchor = standardChain[standardChain.length - 1];
-
-  const placed: PartPaths = {};
-  for (const part of common) {
-    placed[part] = pixels(standard, part).map(
-      (p): Point => [
-        (userAnchor[0] + (p[0] - standardAnchor[0]) * scale) / user.size[0],
-        (userAnchor[1] + (p[1] - standardAnchor[1]) * scale) / user.size[1],
-      ],
-    );
+  // 관절이 꺾인 정도(부호 있음)를 정석과 비교한다. 다르면 닿은 두 부위의 차이를 기준 이상으로 올려 "다름"이 되게 한다.
+  for (const [first, second] of JOINTS) {
+    if (!common.includes(first) || !common.includes(second)) continue;
+    const mine = wrap(mineAngle(second, flip) - mineAngle(first, flip));
+    const ref = wrap(refAngle(second) - refAngle(first));
+    const bendGap = Math.abs(wrap(mine - ref));
+    if (bendGap <= BEND_SAME_DEG) continue;
+    for (const part of [first, second]) {
+      const index = common.indexOf(part);
+      gaps[index] = Math.max(gaps[index], SAME_WITHIN_DEG[part] + 1 + (bendGap - BEND_SAME_DEG));
+    }
   }
-  return placed;
+
+  return { parts: common.map((part, index) => ({ part, deltaDeg: Math.min(180, Math.round(gaps[index])) })) };
 }
+

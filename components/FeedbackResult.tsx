@@ -5,7 +5,7 @@
 // 안내 문구(AI 주의·의료 아님·통증·부상 부위·심한 증상)는 코드가 붙인 notices를 보고 보여 준다.
 
 import { useState, type SyntheticEvent } from "react";
-import { analyzePose, analyzeUrl, placeStandardOnUser, type PartPaths } from "@/lib/pose";
+import { analyzePose, type PartPaths } from "@/lib/pose";
 import { getGuideImage, type ExerciseGuide } from "@/lib/exercises";
 import type { FeedbackResponse, Gender, OverlayItem, Verdict } from "@/lib/types";
 
@@ -55,12 +55,11 @@ function Section({ title, items, numbered = false }: { title: string; items?: st
 }
 
 /**
- * 내가 올린 사진 위에 "정석 선"을 얹어 그린다. (사진은 이 화면 안에서만 쓰고 저장하지 않는다)
- * 선의 모양은 정석 예시 사진에서 가져오고(내 몸을 따라 그리지 않는다), 내 사진에는 크기와 위치만 맞춘다.
- * 색은 내 자세를 정석과 부위별로 비교한 결과로 정한다: 초록 = 같음, 빨강 = 다름.
+ * 내가 올린 사진에서 딴 몸 선을 그 사진 위에 그린다. (사진은 이 화면 안에서만 쓰고 저장하지 않는다)
+ * 정석 예시 사진에서도 같은 몸 선을 따서 내 선과 부위별로 비교하고(lib/pose.ts), 정석과 같은 부위는 초록, 다른 부위는 빨강으로 칠한다.
  */
-function PhotoOverlay({ photoUrl, standardUrl, items }: { photoUrl: string; standardUrl: string; items: OverlayItem[] }) {
-  // 얹을 정석 선: undefined = 찾는 중, null = 만들지 못함
+function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayItem[] }) {
+  // 내 몸 선: undefined = 찾는 중, null = 찾지 못함
   const [paths, setPaths] = useState<PartPaths | null | undefined>(undefined);
 
   async function handleLoad(event: SyntheticEvent<HTMLImageElement>) {
@@ -69,8 +68,7 @@ function PhotoOverlay({ photoUrl, standardUrl, items }: { photoUrl: string; stan
       return;
     }
     try {
-      const [mine, standard] = await Promise.all([analyzePose(event.currentTarget), analyzeUrl(standardUrl)]);
-      setPaths(placeStandardOnUser(mine, standard));
+      setPaths((await analyzePose(event.currentTarget))?.paths ?? null);
     } catch {
       setPaths(null);
     }
@@ -117,12 +115,11 @@ function PhotoOverlay({ photoUrl, standardUrl, items }: { photoUrl: string; stan
           "몸 위치를 찾는 중이에요…"
         ) : segments.length > 0 ? (
           <>
-            정석 자세의 선이에요.{" "}
-            <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 내 자세와 같은 곳,{" "}
-            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 다른 곳이에요.
+            <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 정석과 같은 곳,{" "}
+            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 정석과 다른 곳이에요.
           </>
         ) : (
-          "사진에서 몸을 찾지 못해 정석 선을 얹지 못했어요."
+          "사진에서 몸 위치를 찾지 못해 선은 표시하지 못했어요."
         )}
       </figcaption>
     </figure>
@@ -246,7 +243,7 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
       {result.status === "ok" && (
         <>
           {/* 사진은 선이 없어도 항상 보여 준다. */}
-          {photoUrl && <PhotoOverlay photoUrl={photoUrl} standardUrl={getGuideImage(guide, gender)} items={result.overlay ?? []} />}
+          {photoUrl && <PhotoOverlay photoUrl={photoUrl} items={result.overlay ?? []} />}
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               {result.verdict && (
