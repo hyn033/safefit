@@ -37,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-foreground/5">
         <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col border-x border-foreground/10 bg-background">
           <header className="sticky top-0 z-10 flex h-12 items-center border-b border-foreground/10 bg-background px-4">
-            <span className="text-base font-semibold">세이프핏</span>
+            <span className="text-base font-bold text-accent">세이프핏</span>
             <ProfileEditLink />
           </header>
 

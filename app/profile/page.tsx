@@ -98,20 +98,20 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
       {!initialProfile && (
-        <p className="rounded-lg bg-foreground/5 px-3 py-2 text-sm">
+        <p className="rounded-xl bg-foreground/5 px-3 py-2 text-sm">
           저장된 몸 정보가 없어요. 아래 내용을 입력해 주세요.
         </p>
       )}
 
-      <h1 className="text-xl font-semibold">내 몸 정보</h1>
+      <h1 className="sf-title">내 몸 정보</h1>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-medium">운동 경험</legend>
+        <legend className="sf-h2 mb-1">운동 경험</legend>
         <div className="flex flex-wrap gap-2">
           {EXPERIENCE_OPTIONS.map((option) => (
             <label
               key={option.value}
-              className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-foreground/15 px-3 text-sm has-[:checked]:border-foreground has-[:checked]:bg-foreground/5"
+              className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-foreground/15 px-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent/10"
             >
               <input
                 type="radio"
@@ -119,7 +119,7 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
                 value={option.value}
                 checked={values.experience === option.value}
                 onChange={() => update({ experience: option.value })}
-                className="size-4 accent-foreground"
+                className="size-4 accent-accent"
               />
               {option.label}
             </label>
@@ -129,7 +129,7 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-medium">부상 이력·불편한 부위 (여러 개 선택)</legend>
+        <legend className="sf-h2 mb-1">부상 이력·불편한 부위 (여러 개 선택)</legend>
         <div className="flex flex-wrap gap-2">
           {INJURY_PARTS.map((part) => (
             <ToggleChip
@@ -158,7 +158,7 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
               placeholder="예: 고관절"
               aria-invalid={errors.injuryOther ? true : undefined}
               aria-describedby={errors.injuryOther ? "injury-other-error" : undefined}
-              className="h-11 rounded-lg border border-foreground/20 bg-background px-3 text-base"
+              className="sf-input"
             />
             <FieldError id="injury-other-error" message={errors.injuryOther} />
           </div>
@@ -166,7 +166,7 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
       </fieldset>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="weight" className="text-sm font-medium">
+        <label htmlFor="weight" className="sf-h2">
           체중
         </label>
         <div className="flex items-center gap-2">
@@ -179,7 +179,7 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
             placeholder={`예: 70 (${WEIGHT_MIN_KG}~${WEIGHT_MAX_KG})`}
             aria-invalid={errors.weight ? true : undefined}
             aria-describedby={errors.weight ? "weight-error" : undefined}
-            className="h-11 w-full rounded-lg border border-foreground/20 bg-background px-3 text-base"
+            className="sf-input"
           />
           <span className="text-sm">kg</span>
         </div>
@@ -191,14 +191,14 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
       </p>
 
       {saveFailed && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="sf-error">
           이 브라우저에서는 몸 정보를 저장할 수 없어요. 시크릿 모드나 저장 차단 설정을 끄고 다시 시도해 주세요.
         </p>
       )}
 
       <button
         type="submit"
-        className="h-12 rounded-lg bg-foreground text-base font-medium text-background"
+        className="sf-btn"
       >
         저장
       </button>
@@ -221,11 +221,7 @@ function ToggleChip({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`min-h-11 rounded-lg border px-4 text-sm ${
-        pressed
-          ? "border-foreground bg-foreground text-background"
-          : "border-foreground/15 bg-background text-foreground"
-      }`}
+      className="sf-chip"
     >
       {label}
     </button>
@@ -236,7 +232,7 @@ function ToggleChip({
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} role="alert" className="text-sm text-red-600 dark:text-red-400">
+    <p id={id} role="alert" className="sf-error">
       {message}
     </p>
   );

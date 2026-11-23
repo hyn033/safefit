@@ -35,7 +35,7 @@ function Section({ title, items, numbered = false }: { title: string; items?: st
         <ol className="space-y-2 text-sm">
           {items.map((item, index) => (
             <li key={item} className="flex gap-2">
-              <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
+              <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
                 {index + 1}
               </span>
               <span className="pt-0.5">{item}</span>
@@ -147,7 +147,7 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
               type="button"
               onClick={onConfirmExercise}
               disabled={busy}
-              className="min-h-11 rounded-lg bg-foreground px-4 text-sm font-medium text-background disabled:opacity-40"
+              className="sf-btn"
             >
               {busy ? "분석 중…" : "예, 이대로 분석"}
             </button>
@@ -155,7 +155,7 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
               type="button"
               onClick={onReselect}
               disabled={busy}
-              className="min-h-11 rounded-lg border border-foreground px-4 text-sm font-medium disabled:opacity-40"
+              className="sf-btn-secondary"
             >
               아니요, 운동 다시 고를게요
             </button>

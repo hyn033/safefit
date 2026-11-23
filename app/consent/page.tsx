@@ -34,7 +34,7 @@ export default function ConsentPage() {
 
   return (
     <section aria-labelledby="consent-title" className="flex flex-col gap-5">
-      <h1 id="consent-title" className="text-xl font-semibold">
+      <h1 id="consent-title" className="sf-title">
         시작하기 전에 확인해 주세요
       </h1>
 
@@ -49,7 +49,7 @@ export default function ConsentPage() {
         ))}
       </ul>
 
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-foreground/15 px-3 py-2 text-sm">
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-foreground/15 px-3 py-2 text-sm">
         <input
           type="checkbox"
           checked={checked}
@@ -57,13 +57,13 @@ export default function ConsentPage() {
             setChecked(event.target.checked);
             setSaveFailed(false);
           }}
-          className="size-5 shrink-0 accent-foreground"
+          className="size-5 shrink-0 accent-accent"
         />
         <span>위 내용을 확인했고 동의합니다</span>
       </label>
 
       {saveFailed && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="sf-error">
           이 브라우저에서는 동의를 저장할 수 없어요. 시크릿 모드나 저장 차단 설정을 끄고 다시 시도해 주세요.
         </p>
       )}
@@ -72,7 +72,7 @@ export default function ConsentPage() {
         type="button"
         onClick={handleStart}
         disabled={!checked}
-        className="h-12 rounded-lg bg-foreground text-base font-medium text-background disabled:cursor-not-allowed disabled:opacity-40"
+        className="sf-btn"
       >
         시작하기
       </button>

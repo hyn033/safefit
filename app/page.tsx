@@ -162,7 +162,7 @@ export default function Home() {
       {/* 1. 운동 고르기: 네 개 중 하나를 바로 누른다. */}
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
-          <h2 id="exercise-label" className="text-base font-semibold">어떤 운동인가요?</h2>
+          <h2 id="exercise-label" className="sf-h2">어떤 운동인가요?</h2>
           <p className="text-xs text-foreground/60">
             오늘 남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
           </p>
@@ -184,11 +184,7 @@ export default function Home() {
                 setExerciseId(id);
                 clearResult();
               }}
-              className={`min-h-11 rounded-xl border text-sm font-medium ${
-                exerciseId === id
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-foreground/15 bg-background"
-              }`}
+              className="sf-chip"
             >
               {EXERCISE_GUIDES[id].name}
             </button>
@@ -206,7 +202,7 @@ export default function Home() {
             placeholder="운동 이름 (예: 데드리프트)"
             aria-label="운동 이름"
             aria-invalid={errors.exerciseOther ? true : undefined}
-            className="min-h-11 rounded-xl border border-foreground/15 bg-background px-3 text-base"
+            className="sf-input"
           />
         )}
         <FieldError message={errors.exerciseOther} />
@@ -247,7 +243,7 @@ export default function Home() {
 
       {/* 2. 사진: 큰 영역을 누르면 촬영하거나 앨범에서 고른다. */}
       <div className="flex flex-col gap-2">
-        <h2 className="text-base font-semibold">자세 사진</h2>
+        <h2 className="sf-h2">자세 사진</h2>
         <label
           htmlFor="photo"
           className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-foreground/20 p-3 text-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2"
@@ -275,7 +271,7 @@ export default function Home() {
 
       {/* 3. 메모 */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="memo" className="text-base font-semibold">
+        <label htmlFor="memo" className="sf-h2">
           오늘 메모 <span className="text-sm font-normal text-foreground/60">(선택)</span>
         </label>
         <textarea
@@ -288,7 +284,7 @@ export default function Home() {
           maxLength={MEMO_MAX_LENGTH}
           rows={2}
           placeholder="예: 무릎이 아파요"
-          className="rounded-xl border border-foreground/15 bg-background px-3 py-2 text-base"
+          className="sf-input py-2"
         />
         {memo.length > MEMO_MAX_LENGTH - 100 && (
           <p className="text-right text-xs text-foreground/60">{memo.length}/{MEMO_MAX_LENGTH}</p>
@@ -299,7 +295,7 @@ export default function Home() {
       <button
         type="submit"
         disabled={checking}
-        className="min-h-12 rounded-xl bg-foreground px-4 text-base font-semibold text-background disabled:opacity-40"
+        className="sf-btn"
       >
         {checking ? "분석 중… (최대 30초)" : "피드백 받기"}
       </button>
@@ -313,7 +309,7 @@ export default function Home() {
       )}
       {requestError && (
         <div className="-mt-2 flex flex-col gap-3">
-          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+          <p role="alert" className="sf-error">
             {requestError}
           </p>
           {/* 서버 응답이 없어도 통증 안내는 사라지지 않는다. (메모는 브라우저가 직접 감지한다.) */}
@@ -322,7 +318,7 @@ export default function Home() {
             type="button"
             onClick={() => void sendFeedback(lastConfirmedRef.current)}
             disabled={checking}
-            className="min-h-11 rounded-lg border border-foreground px-4 text-sm font-medium disabled:opacity-40"
+            className="sf-btn-secondary"
           >
             다시 시도
           </button>
@@ -345,7 +341,7 @@ export default function Home() {
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+    <p role="alert" className="sf-error">
       {message}
     </p>
   );
