@@ -1,6 +1,6 @@
 "use client";
 
-// Design Ref: §5.3 몸 정보 화면 — 성별, 부상 이력·불편한 부위, 키·체중을 입력받아 브라우저에만 저장한다. (PLAN 5번)
+// Design Ref: §5.3 몸 정보 화면 — 성별, 키·체중, 부상 이력·불편한 부위를 입력받아 브라우저에만 저장한다. (PLAN 5번)
 // 몸 정보가 없을 때는 처음 입력하는 화면, 이미 있을 때는 고쳐 쓰는(수정) 화면이 된다.
 // Design Ref: §3.1 — 입력 검사 규칙은 lib/validate.ts를 쓴다.
 
@@ -119,41 +119,6 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
         <FieldError id="gender-error" message={errors.gender} />
       </fieldset>
 
-      {/* 부상·불편한 부위: 여러 개 고르기 ("없음"은 다른 부위와 함께 고를 수 없다) */}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="sf-h2 mb-2">아픈 곳이 있나요?</legend>
-        <div className="flex flex-wrap gap-2">
-          <ToggleChip label="없음" pressed={values.noInjury} onClick={toggleNoInjury} />
-          {INJURY_PARTS.map((part) => (
-            <ToggleChip
-              key={part}
-              label={INJURY_LABELS[part]}
-              pressed={values.injuries.includes(part)}
-              onClick={() => toggleInjury(part)}
-            />
-          ))}
-        </div>
-        <FieldError id="injuries-error" message={errors.injuries} />
-
-        {hasOther && (
-          <>
-            <input
-              id="injury-other"
-              type="text"
-              value={values.injuryOther}
-              onChange={(event) => update({ injuryOther: event.target.value })}
-              maxLength={INJURY_OTHER_MAX_LENGTH}
-              placeholder="기타 부위 (예: 고관절)"
-              aria-label="기타 부위"
-              aria-invalid={errors.injuryOther ? true : undefined}
-              aria-describedby={errors.injuryOther ? "injury-other-error" : undefined}
-              className="sf-input"
-            />
-            <FieldError id="injury-other-error" message={errors.injuryOther} />
-          </>
-        )}
-      </fieldset>
-
       {/* 키·체중: 관절 부담(BMI)을 계산하는 데 쓴다. */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
@@ -197,6 +162,41 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
           <FieldError id="weight-error" message={errors.weight} />
         </div>
       </div>
+
+      {/* 부상·불편한 부위: 여러 개 고르기 ("없음"은 다른 부위와 함께 고를 수 없다) */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="sf-h2 mb-2">아픈 곳이 있나요?</legend>
+        <div className="flex flex-wrap gap-2">
+          <ToggleChip label="없음" pressed={values.noInjury} onClick={toggleNoInjury} />
+          {INJURY_PARTS.map((part) => (
+            <ToggleChip
+              key={part}
+              label={INJURY_LABELS[part]}
+              pressed={values.injuries.includes(part)}
+              onClick={() => toggleInjury(part)}
+            />
+          ))}
+        </div>
+        <FieldError id="injuries-error" message={errors.injuries} />
+
+        {hasOther && (
+          <>
+            <input
+              id="injury-other"
+              type="text"
+              value={values.injuryOther}
+              onChange={(event) => update({ injuryOther: event.target.value })}
+              maxLength={INJURY_OTHER_MAX_LENGTH}
+              placeholder="기타 부위 (예: 고관절)"
+              aria-label="기타 부위"
+              aria-invalid={errors.injuryOther ? true : undefined}
+              aria-describedby={errors.injuryOther ? "injury-other-error" : undefined}
+              className="sf-input"
+            />
+            <FieldError id="injury-other-error" message={errors.injuryOther} />
+          </>
+        )}
+      </fieldset>
 
       {saveFailed && (
         <p role="alert" className="sf-error">
