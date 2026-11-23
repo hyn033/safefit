@@ -255,7 +255,6 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
                 <span className="rounded-full bg-foreground/10 px-3 py-1 text-xs">확실하지 않음</span>
               )}
             </div>
-            {result.assessment && <p className="text-base leading-relaxed">{result.assessment}</p>}
           </div>
           <Section title="내 몸에 맞는 수정 방법" items={result.fixes} numbered />
           {result.memoAnswer && (
