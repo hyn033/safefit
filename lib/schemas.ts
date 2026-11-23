@@ -46,6 +46,13 @@ export const feedbackRequestSchema = z
     profile: profileSchema,
     imageDataUrl: z.string().max(3_000_000).regex(IMAGE_DATA_URL),
     exerciseConfirmed: z.boolean().optional(),
+    measurements: z
+      .object({
+        reference: z.enum(["ankle", "knee"]),
+        lineAngleDeg: z.number().min(0).max(180),
+        hipOffsetPct: z.number().min(-100).max(100),
+      })
+      .optional(),
   })
   .superRefine((request, ctx) => {
     if (request.exerciseId === "other" && !request.exerciseOther) {

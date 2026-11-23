@@ -38,6 +38,15 @@ export function toSevereResponse(request: FeedbackRequest): FeedbackResponse {
   return { status: "severe", notices: buildNotices(request), beta: request.exerciseId === "other" };
 }
 
+/** 측정 숫자(각도 도, 퍼센트)가 그대로 들어간 문장 */
+const MEASURE_NUMBER = /d+(?:.d+)?s*(?:도|%|퍼센트)/;
+
+/** 측정값을 보낸 요청이면, AI가 측정 숫자를 그대로 쓴 문장은 화면에 보이지 않게 뺀다. (정밀한 숫자는 말하지 않는 규칙) */
+function withoutMeasureNumbers(request: FeedbackRequest, items: string[] | null | undefined): string[] | undefined {
+  if (!items) return undefined;
+  return request.measurements ? items.filter((item) => !MEASURE_NUMBER.test(item)) : items;
+}
+
 export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): FeedbackResponse {
   const base = {
     status: answer.status,
@@ -53,9 +62,9 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
     ...base,
     verdict: answer.verdict ?? undefined,
     assessment: answer.assessment ?? undefined,
-    differences: answer.differences ?? undefined,
-    problemParts: answer.problemParts ?? undefined,
-    fixes: answer.fixes ?? undefined,
+    differences: withoutMeasureNumbers(request, answer.differences),
+    problemParts: withoutMeasureNumbers(request, answer.problemParts),
+    fixes: withoutMeasureNumbers(request, answer.fixes),
     memoAnswer: answer.memoAnswer ?? undefined,
     overlay: buildOverlay(answer),
     uncertain: answer.uncertain ?? undefined,

@@ -74,6 +74,17 @@ export interface FeedbackRequest {
   imageDataUrl: string;
   /** 운동·사진 불일치 확인에서 "맞다"고 답한 재요청이면 true */
   exerciseConfirmed?: boolean;
+  /** 브라우저가 사진에서 잰 몸 중심선 측정값 (플랭크·브릿지만, 몸을 못 찾으면 없음) */
+  measurements?: BodyLineMeasurement;
+}
+
+/** 몸 중심선 측정값: 어깨–엉덩이–끝 관절(플랭크는 발목, 브릿지는 무릎)이 이루는 각도와 엉덩이의 벗어난 정도 */
+export interface BodyLineMeasurement {
+  reference: "ankle" | "knee";
+  /** 180에 가까울수록 일직선 */
+  lineAngleDeg: number;
+  /** 어깨–끝 관절 선 길이에 대한 %. +이면 엉덩이가 선보다 아래(처짐), -이면 위(솟음) */
+  hipOffsetPct: number;
 }
 
 /** 응답 상태: 정상 / 다시 촬영 / 운동·사진 불일치 확인 / 심한 증상 */

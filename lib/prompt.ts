@@ -15,6 +15,7 @@ export const SYSTEM_PROMPT = `당신은 홈트레이닝 자세를 봐 주는 안
 2. 정석과의 차이는 similar(거의 같음), slight(조금 다름), large(많이 다름) 중 하나로만 표시하세요. 각도·거리·비율 같은 정밀한 숫자는 말하지 않습니다. 사진 한 장으로는 정밀하게 잴 수 없기 때문입니다.
 3. assessment는 정석과 비교한 한 줄 요약입니다. 잘한 점이 있으면 먼저 짧게 인정하고, 그다음 다른 점을 말하세요.
 4. differences에는 사진에서 실제로 보이는 정석과의 다른 점만 적으세요. 보이지 않는 것(관절 속 느낌, 근육 사용, 호흡 등)을 추측해서 적지 않습니다. problemParts에는 그 때문에 무리가 갈 수 있는 몸 부위를 적으세요.
+   요청에 "몸 측정값"이 있으면 일직선·처짐·솟음은 그 판정을 따르세요. 판정이 "정석 범위 안"이면 그 부분은 차이가 아니며, 사진에서 다른 분명한 문제가 따로 없으면 verdict는 similar입니다. "정석 범위 밖"이면 엉덩이가 처졌는지(아래) 솟았는지(위)에 맞게 차이와 수정 방법을 적으세요. 각도·퍼센트 같은 측정 숫자는 사용자에게 보이는 글에 쓰지 말고 "엉덩이가 조금 처져 있어요"처럼 쉬운 말로만 표현합니다.
    사진에서 분명히 보이는 차이만 적으세요. 미세하거나 확신이 없는 차이, 보는 각도 때문에 달라 보이는 것은 적지 않습니다. 정석과 크게 다르지 않으면 verdict는 similar이고 differences·problemParts·fixes는 빈 목록([])으로 두세요. 고칠 점을 억지로 만들어 내지 마세요.
 5. fixes는 최대 3가지이고, 사용자가 바로 해 볼 수 있는 구체적인 동작이어야 합니다. 몸 정보를 반드시 반영하세요.
    - 부상 이력이 있는 부위에는 무리가 적은 방향으로 고칩니다. (예: 무릎이 불편하면 깊이를 줄이고 발 간격을 넓히기, 허리가 불편하면 가동 범위를 줄이고 상체를 세우기, 손목·어깨가 불편하면 버티는 시간을 줄이거나 동작을 쉬운 변형으로 바꾸기)
@@ -51,6 +52,13 @@ JSON 모양:
   "uncertain": true | false
 }`;
 
+/**
+ * 몸 중심선이 일직선이라고 보는 범위. (초안, 예시 사진으로 맞춰 본 값이며 전문가 확인이 필요하다)
+ * minAngle: 어깨–엉덩이–끝 관절 각도의 최솟값(도), maxOffsetPct: 엉덩이가 선에서 벗어나도 되는 최대 %
+ */
+const STRAIGHT_RANGE_PLANK = { minAngle: 158, maxOffsetPct: 10 };
+const STRAIGHT_RANGE_BRIDGE = { minAngle: 160, maxOffsetPct: 12 };
+
 /** 사용자가 고른 운동 이름 ('기타'는 직접 쓴 이름) */
 function exerciseName(request: FeedbackRequest): string {
   if (request.exerciseId === "other") return request.exerciseOther ?? EXERCISE_LABELS.other;
@@ -79,6 +87,25 @@ function guideLines(request: FeedbackRequest): string[] {
   ];
 }
 
+/**
+ * 브라우저가 잰 몸 중심선 측정값을 글로 만든다. 없으면 빈 목록.
+ * 일직선 여부는 눈대중보다 이 숫자가 정확하므로, 숫자를 따르라고 AI에게 알린다.
+ */
+function measurementLines(request: FeedbackRequest): string[] {
+  const m = request.measurements;
+  if (!m) return [];
+  const endName = m.reference === "ankle" ? "발목" : "무릎";
+  const side = m.hipOffsetPct > 0 ? "아래" : "위";
+  const range = request.exerciseId === "plank" ? STRAIGHT_RANGE_PLANK : STRAIGHT_RANGE_BRIDGE;
+  const inRange = m.lineAngleDeg >= range.minAngle && Math.abs(m.hipOffsetPct) <= range.maxOffsetPct;
+  return [
+    `몸 측정값 (프로그램이 사진에서 직접 잰 값. 일직선·처짐·솟음 판단은 눈대중보다 이 값을 따를 것):`,
+    `- 어깨–엉덩이–${endName} 각도: ${m.lineAngleDeg}도 (180도에 가까울수록 일직선)`,
+    `- 엉덩이 위치: 어깨–${endName}을 이은 선보다 ${Math.abs(m.hipOffsetPct)}% ${side}`,
+    `- 판정: ${inRange ? "정석 범위 안(일직선). 일직선·처짐·솟음·허리 꺾임을 차이로 적지 말 것" : "정석 범위 밖. 일직선에서 벗어난 것으로 보고 그 부분을 차이로 적을 것"}`,
+  ];
+}
+
 /** AI에게 보낼 사용자 쪽 글 (사진은 따로 첨부한다) */
 export function buildUserText(request: FeedbackRequest): string {
   const { profile } = request;
@@ -94,6 +121,7 @@ export function buildUserText(request: FeedbackRequest): string {
     ...(profile.heightCm ? [`- 키: ${profile.heightCm}cm`] : []),
     `- 체중: ${profile.weightKg}kg`,
     ...(calcBmi(profile) !== null ? [`- 체질량지수(BMI): ${calcBmi(profile)}, 관절 부담: ${BODY_LOAD_LABELS[getBodyLoad(profile)]} (판단은 코드가 했으니 그대로 따르고, 사용자에게 BMI·체중을 이유로 말하지 않음)`] : []),
+    ...measurementLines(request),
     "오늘 메모 (참고 정보, 아래 <<< >>> 사이의 글):",
     "<<<",
     memo,
