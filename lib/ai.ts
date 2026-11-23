@@ -54,8 +54,8 @@ async function askModel(
         ],
         response_format: { type: "json_object" },
         max_completion_tokens: 900,
-        // 같은 사진에 매번 다른 판정이 나오지 않도록 답변의 흔들림을 줄인다. (gpt-4 계열만 지원하는 값이라 다른 모델은 생략)
-        ...(model.startsWith("gpt-4") ? { temperature: 0.2 } : {}),
+        // 같은 사진에 매번 다른 판정이 나오지 않도록 답변의 흔들림을 최대한 줄인다. (gpt-4 계열만 지원하는 값이라 다른 모델은 생략)
+        ...(model.startsWith("gpt-4") ? { temperature: 0, seed: 7 } : {}),
       },
       { timeout: timeoutMs },
     );
