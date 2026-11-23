@@ -28,7 +28,7 @@ export default function ConsentPage() {
       setSaveFailed(true);
       return;
     }
-    // 몸 정보가 없을 때 /profile로 보내는 일은 몸 정보 화면(PLAN 5번)에서 홈에 붙인다.
+    // 몸 정보가 없으면 AccessGate가 홈에서 /profile로 이어서 보낸다.
     router.replace("/");
   }
 

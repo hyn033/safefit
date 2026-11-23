@@ -106,6 +106,11 @@ export function getProfile(): Profile | null {
   return isProfile(value) ? value : null;
 }
 
+/** 몸 정보가 저장돼 있는지 여부 */
+export function hasProfile(): boolean {
+  return getProfile() !== null;
+}
+
 /** 몸 정보를 저장한다. 이미 있으면 덮어쓴다(수정). 성공하면 true */
 export function saveProfile(profile: Profile): boolean {
   return writeJson(KEYS.profile, profile);

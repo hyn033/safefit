@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import ConsentGate from "@/components/ConsentGate";
+import AccessGate from "@/components/AccessGate";
+import ProfileEditLink from "@/components/ProfileEditLink";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +27,7 @@ export const viewport: Viewport = {
 };
 
 // Design Ref: §5.2 — 모든 화면의 공통 틀 (상단 바 + 화면별 내용 + 하단 고정 안내)
-// (상단 바의 "몸 정보 수정" 버튼은 /profile 화면을 만드는 작업(PLAN 5번)에서 함께 추가한다.)
+// 상단 바의 "몸 정보 수정" 버튼은 홈에서만 보인다. (Design Ref: §5.2)
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -37,11 +38,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col border-x border-foreground/10 bg-background">
           <header className="sticky top-0 z-10 flex h-12 items-center border-b border-foreground/10 bg-background px-4">
             <span className="text-base font-semibold">세이프핏</span>
+            <ProfileEditLink />
           </header>
 
           <main className="flex-1 px-4 pt-4 pb-20">
-            {/* Design Ref: §5.1 — 동의가 없으면 모든 화면에서 /consent로 보낸다. */}
-            <ConsentGate>{children}</ConsentGate>
+            {/* Design Ref: §5.1 — 동의가 없으면 /consent로, 몸 정보가 없으면 /profile로 보낸다. */}
+            <AccessGate>{children}</AccessGate>
           </main>
 
           <footer
