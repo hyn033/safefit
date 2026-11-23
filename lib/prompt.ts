@@ -3,7 +3,7 @@
 
 import { EXERCISE_GUIDES } from "./exercises";
 import { BODY_LOAD_LABELS, calcBmi, getBodyLoad } from "./body";
-import { judgeForm } from "./form";
+import { judgeComparison } from "./form";
 import { EXERCISE_LABELS, GENDER_LABELS, INJURY_LABELS } from "./labels";
 import type { FeedbackRequest } from "./types";
 
@@ -16,7 +16,7 @@ export const SYSTEM_PROMPT = `당신은 홈트레이닝 자세를 봐 주는 안
 2. 정석과의 차이는 similar(거의 같음), slight(조금 다름), large(많이 다름) 중 하나로만 표시하세요. 각도·거리·비율 같은 정밀한 숫자는 말하지 않습니다. 사진 한 장으로는 정밀하게 잴 수 없기 때문입니다.
 3. assessment는 정석과 비교한 한 줄 요약입니다. 잘한 점이 있으면 먼저 짧게 인정하고, 그다음 다른 점을 말하세요.
 4. differences에는 사진에서 실제로 보이는 정석과의 다른 점만 적으세요. 보이지 않는 것(관절 속 느낌, 근육 사용, 호흡 등)을 추측해서 적지 않습니다. problemParts에는 그 때문에 무리가 갈 수 있는 몸 부위를 적으세요.
-   요청에 "자세 판정 결과"가 있으면 몸 인식이 잰 값으로 프로그램이 이미 정한 것이므로 verdict를 그 판정 그대로 쓰고, 판정을 뒤집거나 사진을 다시 평가하지 마세요. differences에는 "정석과 다른 점"만 쉬운 말로 풀어 쓰고(없으면 빈 목록, "참고" 항목은 다른 점이 아니므로 differences에 쓰지 마세요. 참고는 fixes의 맞춤 안내에만 활용하세요), problemParts에는 그 때문에 무리가 갈 부위를 적으세요. 각도·퍼센트 같은 숫자는 쓰지 마세요.
+   요청에 "자세 판정 결과"가 있으면 정석 예시 사진과 몸 선을 비교해 프로그램이 이미 정한 것이므로 verdict를 그 판정 그대로 쓰고, 판정을 뒤집거나 사진을 다시 평가하지 마세요. differences에는 "정석과 다른 점"만 쉬운 말로 풀어 쓰고(없으면 빈 목록, 그 밖의 것을 다른 점으로 지어내지 마세요), problemParts에는 그 때문에 무리가 갈 부위를 적으세요. 각도·퍼센트 같은 숫자는 쓰지 마세요.
    사진에서 분명히 보이는 차이만 적으세요. 미세하거나 확신이 없는 차이, 보는 각도 때문에 달라 보이는 것은 적지 않습니다. 정석과 크게 다르지 않으면 verdict는 similar이고 differences·problemParts는 빈 목록([])으로 두세요. 고칠 점을 억지로 만들어 내지 마세요. (fixes는 아래 5번 규칙처럼 몸 정보에 맞는 안내가 필요하면 쓰세요.)
 5. fixes는 최대 3가지이고, 사용자가 바로 해 볼 수 있는 구체적인 동작이어야 합니다. 몸 정보를 반드시 반영하세요.
    - 자세가 정석이어도 부상 이력이 있는 부위나 관절 부담 단계가 "주의·높음"이면, 그 부위에 무리가 가지 않게 하는 팁을 1~3개 쓰세요. (예: 무릎이 불편하면 "깊이를 얕게 시작하고 무릎이 안으로 모이지 않게 하세요") 정석이고 부상도 관절 부담도 없으면 fixes는 빈 목록이어도 됩니다. 부상 이력이 있는데 fixes를 비우면 안 됩니다.
@@ -38,7 +38,6 @@ export const SYSTEM_PROMPT = `당신은 홈트레이닝 자세를 봐 주는 안
 11. "자세 판정 결과"가 있으면 overlay는 null로 두세요(프로그램이 그립니다). 판정 결과가 없을 때만, overlay에 몸 부위별로 정석과 같은지 다른지만 알려 주는 항목입니다. 선의 위치는 다른 프로그램이 정하므로 좌표는 쓰지 않습니다. status가 ok일 때만 적고, 아니면 null로 두세요.
     - part는 arm(팔), back(등: 어깨~엉덩이), thigh(허벅지), shin(정강이), neck(목) 중 하나입니다. 사진에서 보이고 정석에서 확인할 만한 부위만 3~5개 적으세요.
     - kind "good"은 그 부위가 정석과 일치할 때, "fix"는 정석과 달라서 고쳐야 할 때입니다. 부위마다 정석과 비교해 하나씩 고르세요. differences·fixes에 나온 부위는 "fix"여야 앞뒤가 맞습니다.
-    - 스쿼트와 런지는 팔 위치가 자세와 상관없으므로 arm은 적지 마세요.
     - 확신이 없는 부위는 적지 마세요.
 12. 모든 글은 쉬운 한국어로 쓰고, 아래 모양의 JSON 객체 하나로만 답하세요. 설명이나 마크다운 없이 JSON만 냅니다. 해당하지 않는 항목은 빈 글자("") 대신 null로 두세요.
 
@@ -88,15 +87,16 @@ function guideLines(request: FeedbackRequest): string[] {
  * 판정과 다른 점은 코드가 정한 것이므로 AI는 바꾸지 않고, 쉬운 말로 풀어 쓰며 몸 정보에 맞는 안내를 덧붙인다.
  */
 function formJudgementLines(request: FeedbackRequest): string[] {
-  const judged = judgeForm(request.exerciseId, request.measurements);
+  const judged = judgeComparison(request.comparison);
   if (!judged) return [];
   return [
-    "자세 판정 결과 (몸 인식이 사진에서 잰 값으로 프로그램이 정함. 바꾸지 말고 그대로 따를 것):",
+    "자세 판정 결과 (정석 예시 사진과 몸 선을 비교해 프로그램이 정함. 바꾸지 말고 그대로 따를 것):",
     `- 판정: ${VERDICT_TEXT[judged.verdict]}`,
     `- 정석과 다른 점: ${judged.issues.length === 0 ? "없음" : judged.issues.join(" / ")}`,
-    ...judged.facts.map((fact) => `- 참고: ${fact}`),
   ];
 }
+
+const VERDICT_TEXT = { similar: "정석 (similar)", slight: "조금 다름 (slight)", large: "많이 다름 (large)" } as const;
 
 /**
  * 몸 정보에 따라 fixes에 꼭 써야 하는 맞춤 안내를 요청 본문에 직접 적는다. (규칙 문장만으로는 AI가 빠뜨리는 일이 있어서)
@@ -114,7 +114,6 @@ function careLines(request: FeedbackRequest): string[] {
   return lines.length > 0 ? ["맞춤 안내 (반드시 반영):", ...lines] : [];
 }
 
-const VERDICT_TEXT = { similar: "정석 (similar)", slight: "조금 다름 (slight)", large: "많이 다름 (large)" } as const;
 
 /** AI에게 보낼 사용자 쪽 글 (사진은 따로 첨부한다) */
 export function buildUserText(request: FeedbackRequest): string {
