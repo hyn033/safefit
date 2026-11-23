@@ -115,7 +115,7 @@ function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayIte
         ) : segments.length > 0 ? (
           <>
             <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 정석과 같은 곳,{" "}
-            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 정석과 다른 곳이에요. 몸 위치는 자동으로 찾은 거라 조금 어긋날 수 있어요.
+            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 정석과 다른 곳이에요.
           </>
         ) : (
           "사진에서 몸 위치를 찾지 못해 선은 표시하지 못했어요."
