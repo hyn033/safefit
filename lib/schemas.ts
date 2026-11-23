@@ -46,9 +46,13 @@ export const feedbackRequestSchema = z
     profile: profileSchema,
     imageDataUrl: z.string().max(3_000_000).regex(IMAGE_DATA_URL),
     exerciseConfirmed: z.boolean().optional(),
-    comparison: z
+    measurements: z
       .object({
-        parts: z.array(z.object({ part: z.enum(OVERLAY_PARTS), deltaDeg: z.number().min(0).max(180) })).min(1).max(OVERLAY_PARTS.length),
+        lineAngleDeg: z.number().min(0).max(180).optional(),
+        hipOffsetPct: z.number().min(-100).max(100).optional(),
+        kneeAngleDeg: z.number().min(0).max(180).optional(),
+        torsoLeanDeg: z.number().min(0).max(180).optional(),
+        elbowOffsetPct: z.number().min(0).max(300).optional(),
       })
       .optional(),
   })
