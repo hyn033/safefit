@@ -25,16 +25,30 @@ export const AI_CAUTION_TEXT =
   "AI가 분석한 결과라 실제로 올바른 자세와 다르거나 내 몸에 맞지 않을 수 있습니다. 참고용으로만 활용해 주세요.";
 
 /** 정석과 다른 점 등 목록 하나 */
-function Section({ title, items }: { title: string; items?: string[] }) {
+function Section({ title, items, numbered = false }: { title: string; items?: string[]; numbered?: boolean }) {
   if (!items || items.length === 0) return null;
+  // 수정 방법은 가장 중요하므로 번호를 붙인 카드로 눈에 띄게, 나머지는 가볍게 보여 준다.
   return (
-    <section className="flex flex-col gap-1">
+    <section className={`flex flex-col gap-2 ${numbered ? "rounded-2xl bg-foreground/[0.06] p-4" : ""}`}>
       <h3 className="text-sm font-semibold">{title}</h3>
-      <ul className="list-disc space-y-1 pl-5 text-sm">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
+      {numbered ? (
+        <ol className="space-y-2 text-sm">
+          {items.map((item, index) => (
+            <li key={item} className="flex gap-2">
+              <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
+                {index + 1}
+              </span>
+              <span className="pt-0.5">{item}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/85">
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -151,23 +165,25 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
 
       {result.status === "ok" && (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            {result.verdict && (
-              <span className={`rounded-full px-3 py-1 text-sm font-semibold ${VERDICT_STYLES[result.verdict]}`}>
-                {VERDICT_LABELS[result.verdict]}
-              </span>
-            )}
-            {result.beta && (
-              <span className="rounded-full bg-foreground/10 px-3 py-1 text-xs">베타 · 정확도 미보장</span>
-            )}
-            {result.uncertain && (
-              <span className="rounded-full bg-foreground/10 px-3 py-1 text-xs">확실하지 않음</span>
-            )}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {result.verdict && (
+                <span className={`rounded-full px-4 py-1.5 text-base font-bold ${VERDICT_STYLES[result.verdict]}`}>
+                  {VERDICT_LABELS[result.verdict]}
+                </span>
+              )}
+              {result.beta && (
+                <span className="rounded-full bg-foreground/10 px-3 py-1 text-xs">베타 · 정확도 미보장</span>
+              )}
+              {result.uncertain && (
+                <span className="rounded-full bg-foreground/10 px-3 py-1 text-xs">확실하지 않음</span>
+              )}
+            </div>
+            {result.assessment && <p className="text-base leading-relaxed">{result.assessment}</p>}
           </div>
-          {result.assessment && <p className="text-base font-medium">{result.assessment}</p>}
+          <Section title="내 몸에 맞는 수정 방법" items={result.fixes} numbered />
           <Section title="정석과 다른 점" items={result.differences} />
           <Section title="무리가 가는 부분" items={result.problemParts} />
-          <Section title="내 몸에 맞는 수정 방법" items={result.fixes} />
         </>
       )}
 
@@ -180,8 +196,10 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
           {notices.injuryParts.join(", ")} 부위는 특히 조심하세요. 불편하면 바로 멈추세요.
         </p>
       )}
-      <p className="text-xs text-foreground/70">{AI_CAUTION_TEXT}</p>
-      <p className="text-xs text-foreground/70">참고용 자세 안내이며 의료 진단이 아닙니다.</p>
+      <div className="flex flex-col gap-1 border-t border-foreground/10 pt-3">
+        <p className="text-xs leading-relaxed text-foreground/70">{AI_CAUTION_TEXT}</p>
+        <p className="text-xs text-foreground/70">참고용 자세 안내이며 의료 진단이 아닙니다.</p>
+      </div>
       {result.status === "ok" && <RatingPrompt />}
     </section>
   );
