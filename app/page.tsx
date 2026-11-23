@@ -13,9 +13,9 @@ import { BulbIcon, CameraIcon, ChatIcon, DumbbellIcon, SendIcon } from "@/compon
 import { toSevereResponse } from "@/lib/feedback";
 import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
-import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse, PoseMeasurements } from "@/lib/types";
+import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse, Gender, PoseComparison } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
-import { analyzePose, measurementsFor } from "@/lib/pose";
+import { analyzePose, compareToStandard } from "@/lib/pose";
 import { MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
 import type { FeedbackFieldErrors } from "@/lib/validate";
 
@@ -24,15 +24,24 @@ const subscribeNothing = () => () => {};
 /** 측정이 이 시간 안에 끝나지 않으면 측정 없이 요청한다. (처음에는 몸 인식 모델을 내려받느라 시간이 걸린다) */
 const MEASURE_TIMEOUT_MS = 10_000;
 
-/** 사진에서 잰 몸 측정값. 몸을 못 찾거나 시간이 오래 걸리면 undefined (그러면 AI가 눈대중으로 판단한다) */
-async function measureBody(photoUrl: string | null, exerciseId: ExerciseId): Promise<PoseMeasurements | undefined> {
+/** 사진 한 장을 불러와 몸 인식을 돌린다. */
+async function analyzeUrl(url: string) {
+  const image = new Image();
+  image.src = url;
+  await image.decode();
+  return analyzePose(image);
+}
+
+/**
+ * 내 사진의 몸 선을 정석 예시 사진(운동·성별에 맞는 것)과 부위별로 비교한다.
+ * 몸을 못 찾거나 시간이 오래 걸리면 undefined (그러면 AI가 눈대중으로 판단한다)
+ */
+async function compareWithStandard(photoUrl: string | null, exerciseId: ExerciseId, gender: Gender | undefined): Promise<PoseComparison | undefined> {
   if (!photoUrl) return undefined;
   try {
-    const image = new Image();
-    image.src = photoUrl;
-    await image.decode();
-    const analysis = await Promise.race([analyzePose(image), new Promise<null>((resolve) => setTimeout(() => resolve(null), MEASURE_TIMEOUT_MS))]);
-    return measurementsFor(analysis, exerciseId);
+    const standardUrl = getGuideImage(EXERCISE_GUIDES[exerciseId], gender);
+    const work = Promise.all([analyzeUrl(photoUrl), analyzeUrl(standardUrl)]).then(([mine, standard]) => compareToStandard(mine, standard));
+    return (await Promise.race([work, new Promise<null>((resolve) => setTimeout(() => resolve(null), MEASURE_TIMEOUT_MS))])) ?? undefined;
   } catch {
     return undefined;
   }
@@ -191,11 +200,11 @@ export default function Home() {
     setChecking(true);
     try {
       const imageDataUrl = await prepareImage(photo);
-      // 자세가 정석과 같은지는 눈대중 대신 몸 인식으로 잰 값으로 판정한다. (몸을 못 찾거나 오래 걸리면 측정 없이 보낸다)
-      const measurements = await measureBody(previewUrl, exerciseId);
+      // 자세가 정석과 같은지는 눈대중 대신, 정석 예시 사진과 몸 선을 비교해 판정한다. (몸을 못 찾거나 오래 걸리면 비교 없이 보낸다)
+      const comparison = await compareWithStandard(previewUrl, exerciseId, getProfile()?.gender);
       // 요청을 보내는 순간 1회로 센다. 성공·실패와 무관하다. (사진 오류·입력 누락처럼 보내기 전에 막은 경우는 세지 않는다.)
       setUsageCount(incrementUsage().count);
-      const request: FeedbackRequest = { ...base, imageDataUrl, ...(measurements ? { measurements } : {}) };
+      const request: FeedbackRequest = { ...base, imageDataUrl, ...(comparison ? { comparison } : {}) };
       const response = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -364,7 +373,7 @@ export default function Home() {
             <div className="flex flex-col gap-1">
               <label htmlFor="memo" className="flex items-center gap-2 text-sm font-semibold">
                 <span className="text-accent"><ChatIcon /></span>
-                오늘의 메모 <span className="font-normal text-foreground/60">(선택사항)</span>
+                궁금한 점이 있나요? <span className="font-normal text-foreground/60">(선택사항)</span>
               </label>
               <textarea
                 id="memo"
