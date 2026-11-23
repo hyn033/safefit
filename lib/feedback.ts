@@ -8,7 +8,7 @@ import type { AiAnswer } from "./schemas";
 import type { FeedbackNotices, FeedbackRequest, FeedbackResponse, OverlayItem, OverlayPart, Verdict } from "./types";
 
 /** 정석(similar)일 때 초록 선으로 보여 줄 부위. AI가 따로 말하지 않은 부위는 정석과 같은 것으로 본다. */
-const GOOD_OVERLAY_PARTS: OverlayPart[] = ["arm", "back", "thigh", "shin"];
+const GOOD_OVERLAY_PARTS: OverlayPart[] = ["back", "thigh", "shin"];
 
 /** 사진 위에 그을 부위별 결과. 정석이면 따로 판정하지 않은 부위도 초록으로 채워 몸 전체를 보여 준다. */
 function buildOverlay(verdict: Verdict | undefined, items: OverlayItem[]): OverlayItem[] | undefined {

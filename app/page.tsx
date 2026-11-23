@@ -15,14 +15,14 @@ import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
 import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse, Gender, PoseComparison } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
-import { analyzePose, compareToStandard } from "@/lib/pose";
+import { analyzePose, compareToStandard, warmUpPose } from "@/lib/pose";
 import { MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
 import type { FeedbackFieldErrors } from "@/lib/validate";
 
 const subscribeNothing = () => () => {};
 
-/** 측정이 이 시간 안에 끝나지 않으면 측정 없이 요청한다. (처음에는 몸 인식 모델을 내려받느라 시간이 걸린다) */
-const MEASURE_TIMEOUT_MS = 10_000;
+/** 비교가 이 시간 안에 끝나지 않으면 측정 없이 요청한다. (처음에는 몸 인식 모델을 내려받느라 시간이 걸린다) */
+const MEASURE_TIMEOUT_MS = 20_000;
 
 /** 사진 한 장을 불러와 몸 인식을 돌린다. */
 async function analyzeUrl(url: string) {
@@ -78,6 +78,11 @@ export default function Home() {
     return () => {
       if (previewRef.current) URL.revokeObjectURL(previewRef.current);
     };
+  }, []);
+
+  // 사진을 올리기 전에 몸 인식 모델을 미리 불러와 둔다. (처음에는 내려받느라 시간이 걸려서, 올린 뒤에 시작하면 비교가 늦어진다)
+  useEffect(() => {
+    warmUpPose();
   }, []);
 
   const guide = EXERCISE_GUIDES[exerciseId];

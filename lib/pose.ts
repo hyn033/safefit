@@ -70,6 +70,11 @@ function loadLandmarker(): Promise<Landmarker> {
   return landmarkerPromise;
 }
 
+/** 몸 인식 모델을 미리 불러와 둔다. (처음 쓸 때 15MB 가까이 내려받느라 비교가 늦어지지 않게, 화면을 열 때 호출한다) */
+export function warmUpPose(): void {
+  loadLandmarker().catch(() => {});
+}
+
 /** 부위를 이루는 관절 이름들 (이어진 순서대로). 팔은 어깨–팔꿈치–손목 */
 const PART_JOINTS: Record<OverlayPart, (keyof typeof LEFT)[]> = {
   arm: ["shoulder", "elbow", "wrist"],
