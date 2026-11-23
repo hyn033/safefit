@@ -104,6 +104,7 @@ function isProfile(value: unknown): value is Profile {
   if (value.injuryOther !== undefined && typeof value.injuryOther !== "string") return false;
   // 예전에 너무 길게 저장된 값은 서버가 거절하므로, 몸 정보가 없는 것으로 보고 다시 입력받는다.
   if (typeof value.injuryOther === "string" && value.injuryOther.trim().length > INJURY_OTHER_MAX_LENGTH) return false;
+  if (value.heightCm !== undefined && !(typeof value.heightCm === "number" && Number.isFinite(value.heightCm))) return false;
   return typeof value.weightKg === "number" && Number.isFinite(value.weightKg);
 }
 

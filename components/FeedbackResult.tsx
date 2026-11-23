@@ -202,6 +202,11 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
           {notices.injuryParts.join(", ")} 부위는 특히 조심하세요. 불편하면 바로 멈추세요.
         </p>
       )}
+      {notices.jointCare && !isSevere && (
+        <p className="rounded-lg border border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+          관절에 부담이 갈 수 있는 동작이에요. 깊이를 얕게 시작해서 천천히 늘려 보세요.
+        </p>
+      )}
       <div className="flex flex-col gap-1 border-t border-foreground/10 pt-3">
         <p className="text-xs leading-relaxed text-foreground/70">{AI_CAUTION_TEXT}</p>
         <p className="text-xs text-foreground/70">참고용 자세 안내이며 의료 진단이 아닙니다.</p>

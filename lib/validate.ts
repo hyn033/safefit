@@ -6,6 +6,9 @@ import type { Experience, ExerciseId, Gender, InjuryPart, Profile } from "./type
 /** 체중 허용 범위 (kg, 초안) */
 export const WEIGHT_MIN_KG = 20;
 export const WEIGHT_MAX_KG = 300;
+/** 키 허용 범위 (cm, 초안) */
+export const HEIGHT_MIN_CM = 100;
+export const HEIGHT_MAX_CM = 250;
 /** 기타 부위 글자 수 상한 (서버 요청 검사 lib/schemas.ts와 같은 값) */
 export const INJURY_OTHER_MAX_LENGTH = 50;
 
@@ -20,10 +23,11 @@ export interface ProfileFormValues {
   injuries: InjuryPart[];
   injuryOther: string;
   /** 입력한 그대로의 글자 */
+  height: string;
   weight: string;
 }
 
-export type ProfileFieldName = "gender" | "experience" | "injuries" | "injuryOther" | "weight";
+export type ProfileFieldName = "gender" | "experience" | "injuries" | "injuryOther" | "height" | "weight";
 export type ProfileFieldErrors = Partial<Record<ProfileFieldName, string>>;
 
 export type ProfileFormResult =
@@ -62,6 +66,12 @@ export function validateProfileForm(values: ProfileFormValues): ProfileFormResul
     errors.injuryOther = `기타 부위는 ${INJURY_OTHER_MAX_LENGTH}자 이내로 입력해 주세요.`;
   }
 
+  const heightText = values.height.trim();
+  const heightCm = heightText === "" ? Number.NaN : Number(heightText);
+  if (!Number.isFinite(heightCm) || heightCm < HEIGHT_MIN_CM || heightCm > HEIGHT_MAX_CM) {
+    errors.height = `키를 ${HEIGHT_MIN_CM}~${HEIGHT_MAX_CM}cm 사이 숫자로 입력해 주세요.`;
+  }
+
   const weightText = values.weight.trim();
   const weightKg = weightText === "" ? Number.NaN : Number(weightText);
   if (!Number.isFinite(weightKg) || weightKg < WEIGHT_MIN_KG || weightKg > WEIGHT_MAX_KG) {
@@ -78,6 +88,7 @@ export function validateProfileForm(values: ProfileFormValues): ProfileFormResul
     experience: values.experience,
     noInjury: values.noInjury,
     injuries,
+    heightCm,
     weightKg,
   };
   if (injuries.includes("other")) profile.injuryOther = injuryOther;

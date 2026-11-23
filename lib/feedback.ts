@@ -1,6 +1,7 @@
 // Design Ref: §3, §4.4 — AI 답변과 코드가 붙이는 안내를 합쳐 화면에 줄 피드백 결과를 만든다.
 // 통증·심한 증상·부상 부위 주의 같은 안전 안내는 AI 답변과 무관하게 lib/safety.ts의 규칙으로 코드가 붙인다. (PLAN 11번)
 
+import { getBodyLoad } from "./body";
 import { detectPain, detectSevere, getInjuryParts } from "./safety";
 import type { AiAnswer } from "./schemas";
 import type { FeedbackNotices, FeedbackRequest, FeedbackResponse } from "./types";
@@ -14,6 +15,10 @@ function buildNotices(request: FeedbackRequest): FeedbackNotices {
   if (severe) notices.severe = true;
   const injuryParts = getInjuryParts(request.exerciseId, request.profile);
   if (injuryParts) notices.injuryParts = injuryParts;
+  // 관절 부담이 큰 몸 조건에서 굽히는 운동이면 깊이를 얕게 시작하라는 안내를 코드가 붙인다.
+  if (getBodyLoad(request.profile) !== "normal" && (request.exerciseId === "squat" || request.exerciseId === "lunge")) {
+    notices.jointCare = true;
+  }
   return notices;
 }
 

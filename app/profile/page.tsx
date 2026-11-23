@@ -11,7 +11,7 @@ import { GENDER_LABELS, INJURY_LABELS } from "@/lib/labels";
 import { getProfile, saveProfile } from "@/lib/storage";
 import { GENDERS, INJURY_PARTS } from "@/lib/types";
 import type { Experience, InjuryPart, Profile } from "@/lib/types";
-import { INJURY_OTHER_MAX_LENGTH, WEIGHT_MAX_KG, WEIGHT_MIN_KG, validateProfileForm } from "@/lib/validate";
+import { INJURY_OTHER_MAX_LENGTH, validateProfileForm } from "@/lib/validate";
 import type { ProfileFieldErrors, ProfileFormValues } from "@/lib/validate";
 
 const EXPERIENCE_OPTIONS: { value: Experience; label: string }[] = [
@@ -23,7 +23,7 @@ const EXPERIENCE_OPTIONS: { value: Experience; label: string }[] = [
 /** 저장된 몸 정보를 입력칸 값으로 바꾼다. 없으면 빈 입력칸 */
 function toFormValues(profile: Profile | null): ProfileFormValues {
   if (!profile) {
-    return { gender: "", experience: "", noInjury: false, injuries: [], injuryOther: "", weight: "" };
+    return { gender: "", experience: "", noInjury: false, injuries: [], injuryOther: "", height: "", weight: "" };
   }
   return {
     gender: profile.gender ?? "",
@@ -31,6 +31,7 @@ function toFormValues(profile: Profile | null): ProfileFormValues {
     noInjury: profile.noInjury,
     injuries: profile.injuries,
     injuryOther: profile.injuryOther ?? "",
+    height: profile.heightCm ? String(profile.heightCm) : "",
     weight: String(profile.weightKg),
   };
 }
@@ -180,26 +181,48 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
         )}
       </fieldset>
 
-      {/* 체중 */}
-      <div className="flex flex-col gap-2">
-        <label htmlFor="weight" className="sf-h2">
-          체중
-        </label>
-        <div className="flex items-center gap-2">
-          <input
-            id="weight"
-            type="text"
-            inputMode="decimal"
-            value={values.weight}
-            onChange={(event) => update({ weight: event.target.value })}
-            placeholder={`예: 70 (${WEIGHT_MIN_KG}~${WEIGHT_MAX_KG})`}
-            aria-invalid={errors.weight ? true : undefined}
-            aria-describedby={errors.weight ? "weight-error" : undefined}
-            className="sf-input"
-          />
-          <span className="text-sm">kg</span>
+      {/* 키·체중: 관절 부담(BMI)을 계산하는 데 쓴다. */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="height" className="sf-h2">
+            키
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="height"
+              type="text"
+              inputMode="decimal"
+              value={values.height}
+              onChange={(event) => update({ height: event.target.value })}
+              placeholder={`예: 170`}
+              aria-invalid={errors.height ? true : undefined}
+              aria-describedby={errors.height ? "height-error" : undefined}
+              className="sf-input"
+            />
+            <span className="text-sm">cm</span>
+          </div>
+          <FieldError id="height-error" message={errors.height} />
         </div>
-        <FieldError id="weight-error" message={errors.weight} />
+        <div className="flex flex-col gap-2">
+          <label htmlFor="weight" className="sf-h2">
+            체중
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="weight"
+              type="text"
+              inputMode="decimal"
+              value={values.weight}
+              onChange={(event) => update({ weight: event.target.value })}
+              placeholder="예: 70"
+              aria-invalid={errors.weight ? true : undefined}
+              aria-describedby={errors.weight ? "weight-error" : undefined}
+              className="sf-input"
+            />
+            <span className="text-sm">kg</span>
+          </div>
+          <FieldError id="weight-error" message={errors.weight} />
+        </div>
       </div>
 
       {saveFailed && (

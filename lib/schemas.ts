@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { EXERCISE_IDS, EXPERIENCE_LEVELS, GENDERS, INJURY_PARTS } from "./types";
-import { WEIGHT_MAX_KG, WEIGHT_MIN_KG } from "./validate";
+import { HEIGHT_MAX_CM, HEIGHT_MIN_CM, WEIGHT_MAX_KG, WEIGHT_MIN_KG } from "./validate";
 
 /** 사진 data URL 허용 형식: JPEG·PNG·WebP (Design Ref: §3.1) */
 const IMAGE_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
@@ -19,6 +19,7 @@ const profileSchema = z
     noInjury: z.boolean(),
     injuries: z.array(z.enum(INJURY_PARTS)).max(INJURY_PARTS.length),
     injuryOther: z.string().trim().max(50).optional(),
+    heightCm: z.number().min(HEIGHT_MIN_CM).max(HEIGHT_MAX_CM).optional(),
     weightKg: z.number().min(WEIGHT_MIN_KG).max(WEIGHT_MAX_KG),
   })
   .superRefine((profile, ctx) => {

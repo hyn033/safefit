@@ -42,6 +42,8 @@ export interface Profile {
   injuries: InjuryPart[];
   /** injuries에 'other'가 있으면 필수 */
   injuryOther?: string;
+  /** 키(cm). 허용 범위는 100~250. 체질량지수로 관절 부담 단계를 정한다. (예전에 저장된 몸 정보에는 없을 수 있다) */
+  heightCm?: number;
   /** 체중(kg). 허용 범위는 20~300 (초안) */
   weightKg: number;
 }
@@ -96,6 +98,8 @@ export interface FeedbackNotices {
   severe?: true;
   /** 주의가 필요한 부상 부위 */
   injuryParts?: string[];
+  /** 관절 부담이 큰 몸 조건에서 굽히는 운동(스쿼트·런지)을 할 때: 깊이를 얕게 시작하라는 안내 */
+  jointCare?: true;
 }
 
 /** 피드백 결과 */

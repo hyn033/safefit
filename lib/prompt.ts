@@ -2,6 +2,7 @@
 // 안전 문구(통증 안내, 부상 부위 주의 등)는 AI에 맡기지 않고 코드가 붙인다. (Design Ref: §1.1, §4.4)
 
 import { EXERCISE_GUIDES } from "./exercises";
+import { BODY_LOAD_LABELS, calcBmi, getBodyLoad } from "./body";
 import { EXERCISE_LABELS, EXPERIENCE_LABELS, GENDER_LABELS, INJURY_LABELS } from "./labels";
 import type { FeedbackRequest } from "./types";
 
@@ -17,6 +18,7 @@ export const SYSTEM_PROMPT = `당신은 홈트레이닝 자세를 봐 주는 안
 5. fixes는 최대 3가지이고, 사용자가 바로 해 볼 수 있는 구체적인 동작이어야 합니다. 몸 정보를 반드시 반영하세요.
    - 부상 이력이 있는 부위에는 무리가 적은 방향으로 고칩니다. (예: 무릎이 불편하면 깊이를 줄이고 발 간격을 넓히기, 허리가 불편하면 가동 범위를 줄이고 상체를 세우기, 손목·어깨가 불편하면 버티는 시간을 줄이거나 동작을 쉬운 변형으로 바꾸기)
    - 체중이 많은 경우와 운동 경험이 "처음"인 경우에는 관절에 부담이 적은 쉬운 변형과 낮은 강도를 먼저 권합니다.
+   - 몸 정보에 "관절 부담" 단계가 있으면 따르세요. "주의"이면 스쿼트·런지처럼 굽히는 운동은 깊이를 얕게 시작하라고 권하고, "높음"이면 얕은 깊이와 낮은 강도·쉬운 변형(예: 의자나 벽을 이용한 동작, 횟수·시간 줄이기)을 먼저 권하세요. 이유를 말할 때는 체중·BMI·비만 같은 말 없이 "무릎·허리 관절의 부담을 줄이기 위해"처럼 표현합니다.
    - 정석에 가까워지는 것보다 안전이 우선입니다. 정석과 무리 없는 방법이 충돌하면 무리 없는 방법을 권하세요.
 6. 말투는 부드럽고 존중하는 쉬운 한국어입니다. 아래는 절대 쓰지 않습니다.
    - 진단·치료 표현: 병명, "~로 보입니다(질환)", "치료", "처방", "재활", "염증", "손상됐다" 등
@@ -85,7 +87,9 @@ export function buildUserText(request: FeedbackRequest): string {
     ...(profile.gender ? [`- 성별: ${GENDER_LABELS[profile.gender]} (자세 설명의 참고로만 쓰고 성별로 평가하지 않음)`] : []),
     `- 운동 경험: ${EXPERIENCE_LABELS[profile.experience]}`,
     `- 부상 이력·불편한 부위: ${injuryText(request)}`,
+    ...(profile.heightCm ? [`- 키: ${profile.heightCm}cm`] : []),
     `- 체중: ${profile.weightKg}kg`,
+    ...(calcBmi(profile) !== null ? [`- 체질량지수(BMI): ${calcBmi(profile)}, 관절 부담: ${BODY_LOAD_LABELS[getBodyLoad(profile)]} (판단은 코드가 했으니 그대로 따르고, 사용자에게 BMI·체중을 이유로 말하지 않음)`] : []),
     "오늘 메모 (참고 정보, 아래 <<< >>> 사이의 글):",
     "<<<",
     memo,
