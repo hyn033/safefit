@@ -15,7 +15,7 @@ import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
 import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse, Gender, PoseComparison } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
-import { analyzePose, compareToStandard, warmUpPose } from "@/lib/pose";
+import { analyzeUrl, compareToStandard, warmUpPose } from "@/lib/pose";
 import { MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
 import type { FeedbackFieldErrors } from "@/lib/validate";
 
@@ -23,14 +23,6 @@ const subscribeNothing = () => () => {};
 
 /** 비교가 이 시간 안에 끝나지 않으면 측정 없이 요청한다. (처음에는 몸 인식 모델을 내려받느라 시간이 걸린다) */
 const MEASURE_TIMEOUT_MS = 20_000;
-
-/** 사진 한 장을 불러와 몸 인식을 돌린다. */
-async function analyzeUrl(url: string) {
-  const image = new Image();
-  image.src = url;
-  await image.decode();
-  return analyzePose(image);
-}
 
 /**
  * 내 사진의 몸 선을 정석 예시 사진(운동·성별에 맞는 것)과 부위별로 비교한다.
