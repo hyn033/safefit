@@ -96,41 +96,39 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
   const hasOther = values.injuries.includes("other");
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-      {!initialProfile && (
-        <p className="rounded-xl bg-foreground/5 px-3 py-2 text-sm">
-          저장된 몸 정보가 없어요. 아래 내용을 입력해 주세요.
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 pt-2">
+      <div className="flex flex-col gap-1">
+        <h1 className="sf-title">내 몸 정보</h1>
+        <p className="text-sm text-foreground/70">
+          {initialProfile ? "내 몸에 맞는 안내를 위해 사용돼요." : "저장된 몸 정보가 없어요. 한 번만 입력해 주세요."}
         </p>
-      )}
+      </div>
 
-      <h1 className="sf-title">내 몸 정보</h1>
-
+      {/* 운동 경험: 3칸 중 하나 */}
       <fieldset className="flex flex-col gap-2">
-        <legend className="sf-h2 mb-1">운동 경험</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="sf-h2 mb-2">운동 경험</legend>
+        <div role="radiogroup" aria-label="운동 경험" className="grid grid-cols-3 gap-2">
           {EXPERIENCE_OPTIONS.map((option) => (
-            <label
+            <button
               key={option.value}
-              className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-foreground/15 px-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent/10"
+              type="button"
+              role="radio"
+              aria-checked={values.experience === option.value}
+              onClick={() => update({ experience: option.value })}
+              className="sf-chip px-2"
             >
-              <input
-                type="radio"
-                name="experience"
-                value={option.value}
-                checked={values.experience === option.value}
-                onChange={() => update({ experience: option.value })}
-                className="size-4 accent-accent"
-              />
               {option.label}
-            </label>
+            </button>
           ))}
         </div>
         <FieldError id="experience-error" message={errors.experience} />
       </fieldset>
 
+      {/* 부상·불편한 부위: 여러 개 고르기 ("없음"은 다른 부위와 함께 고를 수 없다) */}
       <fieldset className="flex flex-col gap-2">
-        <legend className="sf-h2 mb-1">부상 이력·불편한 부위 (여러 개 선택)</legend>
+        <legend className="sf-h2 mb-2">아픈 곳이 있나요?</legend>
         <div className="flex flex-wrap gap-2">
+          <ToggleChip label="없음" pressed={values.noInjury} onClick={toggleNoInjury} />
           {INJURY_PARTS.map((part) => (
             <ToggleChip
               key={part}
@@ -139,33 +137,30 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
               onClick={() => toggleInjury(part)}
             />
           ))}
-          <ToggleChip label="없음" pressed={values.noInjury} onClick={toggleNoInjury} />
         </div>
-        <p className="text-xs text-foreground/60">&quot;없음&quot;은 다른 부위와 함께 고를 수 없어요.</p>
         <FieldError id="injuries-error" message={errors.injuries} />
 
         {hasOther && (
-          <div className="mt-1 flex flex-col gap-1">
-            <label htmlFor="injury-other" className="text-sm">
-              기타 부위
-            </label>
+          <>
             <input
               id="injury-other"
               type="text"
               value={values.injuryOther}
               onChange={(event) => update({ injuryOther: event.target.value })}
               maxLength={INJURY_OTHER_MAX_LENGTH}
-              placeholder="예: 고관절"
+              placeholder="기타 부위 (예: 고관절)"
+              aria-label="기타 부위"
               aria-invalid={errors.injuryOther ? true : undefined}
               aria-describedby={errors.injuryOther ? "injury-other-error" : undefined}
               className="sf-input"
             />
             <FieldError id="injury-other-error" message={errors.injuryOther} />
-          </div>
+          </>
         )}
       </fieldset>
 
-      <div className="flex flex-col gap-1">
+      {/* 체중 */}
+      <div className="flex flex-col gap-2">
         <label htmlFor="weight" className="sf-h2">
           체중
         </label>
@@ -186,22 +181,18 @@ function ProfileForm({ initialProfile }: { initialProfile: Profile | null }) {
         <FieldError id="weight-error" message={errors.weight} />
       </div>
 
-      <p className="text-xs leading-relaxed text-foreground/60">
-        브라우저 데이터를 지우거나 기기를 바꾸면 몸 정보를 다시 입력해야 합니다.
-      </p>
-
       {saveFailed && (
         <p role="alert" className="sf-error">
           이 브라우저에서는 몸 정보를 저장할 수 없어요. 시크릿 모드나 저장 차단 설정을 끄고 다시 시도해 주세요.
         </p>
       )}
 
-      <button
-        type="submit"
-        className="sf-btn"
-      >
+      <button type="submit" className="sf-btn">
         저장
       </button>
+      <p className="text-center text-xs leading-relaxed text-foreground/60">
+        이 브라우저에만 저장돼요. 브라우저 데이터를 지우거나 기기를 바꾸면 다시 입력해야 합니다.
+      </p>
     </form>
   );
 }
