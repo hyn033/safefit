@@ -74,25 +74,17 @@ export interface FeedbackRequest {
   imageDataUrl: string;
   /** 운동·사진 불일치 확인에서 "맞다"고 답한 재요청이면 true */
   exerciseConfirmed?: boolean;
-  /** 브라우저가 사진에서 잰 몸 측정값 (몸을 못 찾으면 없음) */
-  measurements?: PoseMeasurements;
+  /** 정석 예시 사진과 몸 선을 비교한 결과 (몸을 못 찾으면 없음) */
+  comparison?: PoseComparison;
 }
 
 /**
- * 브라우저가 사진에서 잰 몸 측정값. 운동마다 필요한 항목만 들어 있고, 관절이 안 보여 못 잰 항목은 없다.
- * 판정은 이 값을 보고 코드(lib/form.ts)가 한다.
+ * 내 사진과 정석 예시 사진의 몸 선을 부위별로 비교한 결과. (브라우저가 두 사진에서 몸 인식을 돌려 구한다)
+ * deltaDeg: 그 부위가 정석과 이루는 각도 차이(도). 0에 가까울수록 정석과 같다.
+ * 같은지 다른지의 판정과 초록·빨강은 이 값을 보고 코드(lib/form.ts)가 정한다.
  */
-export interface PoseMeasurements {
-  /** 어깨–엉덩이–끝 관절(플랭크는 발목, 브릿지는 무릎) 각도(도). 180에 가까울수록 일직선 */
-  lineAngleDeg?: number;
-  /** 엉덩이가 어깨–끝 관절 선에서 벗어난 정도(선 길이의 %). +이면 아래(처짐), -이면 위(솟음) */
-  hipOffsetPct?: number;
-  /** 엉덩이–무릎–발목 각도(도). 작을수록 깊이 굽힘 */
-  kneeAngleDeg?: number;
-  /** 어깨→엉덩이 선이 수직에서 기울어진 정도(도). 0이면 상체가 곧게 선 것 */
-  torsoLeanDeg?: number;
-  /** 팔꿈치가 어깨 바로 아래에서 옆으로 벗어난 정도(어깨–엉덩이 길이의 %) */
-  elbowOffsetPct?: number;
+export interface PoseComparison {
+  parts: { part: OverlayPart; deltaDeg: number }[];
 }
 
 /** 응답 상태: 정상 / 다시 촬영 / 운동·사진 불일치 확인 / 심한 증상 */
