@@ -1,13 +1,10 @@
 // 몸 인식으로 잰 측정값을 보고 자세가 정석과 같은지 코드가 판정한다. (AI의 눈대중 대신)
 // 판정(정석/조금 다름/많이 다름)과 어느 부위가 다른지는 여기서 정하고, AI는 그 결과를 쉬운 말로 풀어 쓰며 몸 정보에 맞는 안내를 한다.
 //
-// 기준 값은 초안이다. 정석 예시 사진 8장(남·여 × 4가지 운동)의 측정값에 가깝게 조여서 잡았다.
-// (예시 사진 측정값: 스쿼트 상체 40도·무릎 61~63도, 런지 상체 1도·무릎 94~99도, 플랭크 일직선 164~166도·엉덩이 -6~-7%·팔꿈치 6%,
-//  브릿지 일직선 175도·엉덩이 2%·무릎 67도) 몸 인식은 같은 자세도 3~5도쯤 흔들려서 너무 조이면 잘한 자세도 다르다고 나온다.
+// 기준 값은 초안이다. 정석 예시 사진 8장(남·여 × 4가지 운동)이 여유 있게 "정석"으로 나오도록 잡았고,
 // 실제 정석 범위는 전문가 확인이 필요하다.
 
-import { getBodyLoad } from "./body";
-import type { ExerciseId, OverlayItem, OverlayPart, PoseMeasurements, Profile, Verdict } from "./types";
+import type { ExerciseId, OverlayItem, OverlayPart, PoseMeasurements, Verdict } from "./types";
 
 /** 정석과 다른 점 하나 */
 interface FormIssue {
@@ -31,19 +28,13 @@ export interface FormJudgement {
 }
 
 // ─── 기준 값 (초안) ───
-const PLANK = { minLineAngle: 160, maxHipOffset: 8, largeLineAngle: 150, largeHipOffset: 14, maxElbowOffset: 14 };
-const BRIDGE = { minLineAngle: 165, maxHipOffset: 8, largeLineAngle: 150, minKneeAngle: 55, maxKneeAngle: 95 };
-// 무릎 각도는 작을수록 깊게 굽힌 것. 깊이는 정석 범위 밖이면 다르다고 본다.
-const SQUAT = { maxTorsoLean: 48, largeTorsoLean: 62, minKneeAngle: 45, maxKneeAngle: 90, largeMaxKneeAngle: 115 };
-const LUNGE = { maxTorsoLean: 12, largeTorsoLean: 25, minKneeAngle: 75, maxKneeAngle: 115, largeMaxKneeAngle: 135 };
-
-/** 얕게 시작하라고 권하는 몸 조건인지: 관절 부담이 "주의" 이상이거나 무릎·허리가 불편한 경우 */
-function needsShallowDepth(profile: Profile): boolean {
-  return getBodyLoad(profile) !== "normal" || profile.injuries.includes("knee") || profile.injuries.includes("back");
-}
+const PLANK = { minLineAngle: 158, maxHipOffset: 10, largeLineAngle: 145, largeHipOffset: 18, maxElbowOffset: 20 };
+const BRIDGE = { minLineAngle: 160, maxHipOffset: 12, largeLineAngle: 145, minKneeAngle: 50, maxKneeAngle: 110 };
+const SQUAT = { maxTorsoLean: 55, largeTorsoLean: 70 };
+const LUNGE = { maxTorsoLean: 25, largeTorsoLean: 40 };
 
 /** 판정에 쓸 수 있는 측정값이 있는 운동인지 */
-function evaluate(exerciseId: ExerciseId, m: PoseMeasurements, lenientDepth: boolean): { issues: FormIssue[]; judged: OverlayPart[]; facts: string[] } | null {
+function evaluate(exerciseId: ExerciseId, m: PoseMeasurements): { issues: FormIssue[]; judged: OverlayPart[]; facts: string[] } | null {
   const issues: FormIssue[] = [];
   const judged: OverlayPart[] = [];
   const facts: string[] = [];
@@ -96,18 +87,8 @@ function evaluate(exerciseId: ExerciseId, m: PoseMeasurements, lenientDepth: boo
         });
       }
     }
+    // 굽힌 깊이는 정석 여부를 가리지 않고, 몸에 맞는 안내(얕게 시작하기 등)에 참고하도록 AI에게만 알려 준다.
     if (m.kneeAngleDeg !== undefined) {
-      // 굽힌 깊이: 관절 부담이 크거나 무릎·허리가 불편한 사람에게는 얕게 시작하라고 권하므로, 이 경우에는 깊이로 다르다고 하지 않는다.
-      if (!lenientDepth) {
-        judged.push("thigh", "shin");
-        if (m.kneeAngleDeg > rule.maxKneeAngle || m.kneeAngleDeg < rule.minKneeAngle) {
-          issues.push({
-            text: m.kneeAngleDeg > rule.maxKneeAngle ? "무릎을 굽힌 깊이가 정석보다 얕아요." : "무릎을 정석보다 많이 깊게 굽혔어요.",
-            severity: m.kneeAngleDeg > rule.largeMaxKneeAngle ? "large" : "slight",
-            parts: ["thigh", "shin"],
-          });
-        }
-      }
       const depth = m.kneeAngleDeg <= 100 ? "깊게" : m.kneeAngleDeg <= 130 ? "보통으로" : "얕게";
       facts.push(`무릎을 ${depth} 굽혔어요.`);
     }
@@ -122,10 +103,9 @@ function evaluate(exerciseId: ExerciseId, m: PoseMeasurements, lenientDepth: boo
  * 측정값으로 자세를 판정한다. 판정할 수 있는 측정값이 없으면(몸을 못 찾음 등) null이고, 그때는 AI가 눈대중으로 판단한다.
  * 판정: 다른 점이 없으면 정석(similar), 하나면 조금 다름(slight), 둘 이상이거나 크게 다르면 많이 다름(large)
  */
-export function judgeForm(exerciseId: ExerciseId, measurements: PoseMeasurements | undefined, profile?: Profile): FormJudgement | null {
+export function judgeForm(exerciseId: ExerciseId, measurements: PoseMeasurements | undefined): FormJudgement | null {
   if (!measurements) return null;
-  const lenientDepth = profile ? needsShallowDepth(profile) : false;
-  const result = evaluate(exerciseId, measurements, lenientDepth);
+  const result = evaluate(exerciseId, measurements);
   if (!result) return null;
 
   const { issues, judged, facts } = result;

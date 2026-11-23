@@ -66,7 +66,7 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
   if (answer.status !== "ok") return base;
 
   // 몸 인식 측정값이 있으면 판정과 선(초록·빨강)은 코드가 정한 것을 쓰고, AI의 판정은 따르지 않는다.
-  const judged = judgeForm(request.exerciseId, request.measurements, request.profile);
+  const judged = judgeForm(request.exerciseId, request.measurements);
   const verdict = judged ? judged.verdict : answer.verdict ?? undefined;
   // 정석인데 AI가 다른 점을 적었다면 근거가 없으므로 보여 주지 않는다. (맞춤 안내 fixes는 그대로 둔다)
   const noDifferences = judged?.verdict === "similar";

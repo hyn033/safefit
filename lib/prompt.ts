@@ -88,7 +88,7 @@ function guideLines(request: FeedbackRequest): string[] {
  * 판정과 다른 점은 코드가 정한 것이므로 AI는 바꾸지 않고, 쉬운 말로 풀어 쓰며 몸 정보에 맞는 안내를 덧붙인다.
  */
 function formJudgementLines(request: FeedbackRequest): string[] {
-  const judged = judgeForm(request.exerciseId, request.measurements, request.profile);
+  const judged = judgeForm(request.exerciseId, request.measurements);
   if (!judged) return [];
   return [
     "자세 판정 결과 (몸 인식이 사진에서 잰 값으로 프로그램이 정함. 바꾸지 말고 그대로 따를 것):",
