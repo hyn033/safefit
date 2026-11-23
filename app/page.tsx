@@ -203,6 +203,7 @@ export default function Home() {
             onReselect={handleReselect}
             busy={checking}
             photoUrl={previewUrl}
+            gender={gender}
           />
         </>
       ) : !confirmed ? (

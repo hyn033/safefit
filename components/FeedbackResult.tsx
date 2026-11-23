@@ -6,8 +6,8 @@
 
 import { useState, type SyntheticEvent } from "react";
 import { findPartPaths, type PartPaths } from "@/lib/pose";
-import type { ExerciseGuide } from "@/lib/exercises";
-import type { FeedbackResponse, OverlayItem, Verdict } from "@/lib/types";
+import { getGuideImage, type ExerciseGuide } from "@/lib/exercises";
+import type { FeedbackResponse, Gender, OverlayItem, Verdict } from "@/lib/types";
 
 const VERDICT_LABELS: Record<Verdict, string> = {
   similar: "정석과 거의 같음",
@@ -183,9 +183,11 @@ interface FeedbackResultProps {
   busy: boolean;
   /** 사용자가 올린 사진의 임시 주소 (선을 겹쳐 그리는 데 쓴다) */
   photoUrl?: string | null;
+  /** 몸 정보의 성별 (다시 촬영 안내의 예시 그림을 성별에 맞게 고른다) */
+  gender?: Gender;
 }
 
-export default function FeedbackResult({ result, guide, onConfirmExercise, onReselect, busy, photoUrl }: FeedbackResultProps) {
+export default function FeedbackResult({ result, guide, onConfirmExercise, onReselect, busy, photoUrl, gender }: FeedbackResultProps) {
   const { notices } = result;
   const isSevere = result.status === "severe";
 
@@ -205,7 +207,7 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
           <p role="alert" className="text-base font-semibold">다시 촬영해 주세요.</p>
           <p className="text-sm">사진으로 자세를 확인하기 어려워요. 아래 안내대로 다시 찍어 주세요.</p>
           {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
-          <img src={guide.imagePath} alt={guide.imageAlt} className="w-full rounded-lg" />
+          <img src={getGuideImage(guide, gender)} alt={guide.imageAlt} className="w-full rounded-lg" />
           <p className="text-sm"><strong>찍을 순간</strong>: {guide.shootMoment}</p>
           <p className="text-sm"><strong>카메라</strong>: {guide.cameraNote}</p>
           <p className="text-xs text-foreground/70">전신이 나오게, 밝은 곳에서, 옆모습으로 찍어 주세요. 얼굴은 가려 주세요.</p>
