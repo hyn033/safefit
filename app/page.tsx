@@ -1,15 +1,18 @@
 "use client";
 
 // Design Ref: §5.3 홈 화면 — 운동 선택, 운동 안내 카드, 사진, 오늘 메모를 입력받는다. (PLAN 8번)
-// 입력 검사(PLAN 9), 서버 호출·결과 영역(PLAN 12), 하루 횟수 제한(PLAN 14)은 이후 작업에서 연결한다.
+// 입력 검사(PLAN 9)와 서버 호출·결과 영역(PLAN 12)을 연결했다. 예외 상황(13), 하루 횟수 제한(14), 평가(15)는 이후 작업이다.
 // 사진·메모는 이 화면의 메모리에만 두고 어디에도 저장하지 않는다.
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES } from "@/lib/exercises";
-import { DAILY_LIMIT, getUsage } from "@/lib/storage";
+import FeedbackResult from "@/components/FeedbackResult";
+import { toSevereResponse } from "@/lib/feedback";
+import { detectSevere } from "@/lib/safety";
+import { DAILY_LIMIT, getProfile, getUsage } from "@/lib/storage";
 import { EXERCISE_IDS } from "@/lib/types";
-import type { ExerciseId } from "@/lib/types";
+import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
 import { MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
 import type { FeedbackFieldErrors } from "@/lib/validate";
@@ -28,7 +31,8 @@ export default function Home() {
   const [memo, setMemo] = useState("");
   const [errors, setErrors] = useState<FeedbackFieldErrors>({});
   const [checking, setChecking] = useState(false);
-  const [readyMessage, setReadyMessage] = useState<string | null>(null);
+  const [result, setResult] = useState<FeedbackResponse | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
   // 미리보기 주소는 사진을 고를 때 만들고, 바꾸거나 화면을 떠날 때 해제한다.
   const previewRef = useRef<string | null>(null);
@@ -54,10 +58,11 @@ export default function Home() {
   /** 입력이 바뀌면 이전 검사 결과를 지운다. */
   function clearResult() {
     setErrors({});
-    setReadyMessage(null);
+    setResult(null);
+    setRequestError(null);
   }
 
-  // 입력 검사 → 사진 줄이기. 서버로 보내는 것은 PLAN 12번에서 이어서 연결한다.
+  // 입력 검사 → (심한 증상이면 보내지 않고 안내) → 사진 줄이기 → 서버에 요청 → 결과 표시
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (checking) return;
@@ -67,19 +72,52 @@ export default function Home() {
       photo: photo ? { type: photo.type, size: photo.size } : null,
       memo,
     });
-    setReadyMessage(null);
+    setResult(null);
+    setRequestError(null);
     if (Object.keys(found).length > 0 || !photo) {
       setErrors(found);
       return;
     }
     setErrors({});
+
+    const profile = getProfile();
+    if (!profile) {
+      setRequestError("저장된 몸 정보가 없어요. '몸 정보 수정'에서 먼저 입력해 주세요.");
+      return;
+    }
+    const base = {
+      exerciseId,
+      exerciseOther: exerciseId === "other" ? exerciseOther.trim() : undefined,
+      memo,
+      profile,
+    };
+
+    // 심한 증상 표현이 있으면 요청을 보내지 않고 안내만 보여 준다. (Design Ref: §2 ②)
+    if (detectSevere(memo)) {
+      setResult(toSevereResponse({ ...base, imageDataUrl: "" }));
+      return;
+    }
+
     setChecking(true);
     try {
-      const dataUrl = await prepareImage(photo);
-      setReadyMessage(`입력 검사를 통과했어요. (줄인 사진 약 ${Math.round(dataUrl.length / 1024)}KB)`);
+      const request: FeedbackRequest = { ...base, imageDataUrl: await prepareImage(photo) };
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+        setRequestError(body?.error?.message ?? "잠시 문제가 생겼어요. 다시 시도해 주세요.");
+        return;
+      }
+      setResult((await response.json()) as FeedbackResponse);
     } catch (error) {
-      const message = error instanceof ImagePrepareError ? error.message : "사진을 처리하지 못했어요. 다른 사진으로 시도해 주세요.";
-      setErrors({ photo: message });
+      if (error instanceof ImagePrepareError) setErrors({ photo: error.message });
+      else if (error instanceof DOMException && error.name === "TimeoutError") {
+        setRequestError("시간이 오래 걸리고 있어요. 다시 시도해 주세요.");
+      } else setRequestError("연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.");
     } finally {
       setChecking(false);
     }
@@ -203,13 +241,14 @@ export default function Home() {
         disabled={checking}
         className="min-h-12 rounded-lg bg-foreground px-4 text-base font-medium text-background disabled:opacity-40"
       >
-        {checking ? "사진 확인 중…" : "피드백 받기"}
+        {checking ? "분석 중… (최대 30초)" : "피드백 받기"}
       </button>
-      {readyMessage && (
-        <p role="status" className="-mt-4 text-sm text-foreground/80">
-          {readyMessage} 피드백 연결은 다음 작업에서 이어집니다.
+      {requestError && (
+        <p role="alert" className="-mt-2 text-sm text-red-700 dark:text-red-400">
+          {requestError}
         </p>
       )}
+      {result && <FeedbackResult result={result} />}
     </form>
   );
 }
