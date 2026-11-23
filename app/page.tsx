@@ -1,20 +1,20 @@
 "use client";
 
-// Design Ref: §5.3 홈 화면 — 운동 고르기(버튼 4개), 운동 안내(그림+핵심 두 줄, 하는 법은 펼쳐 보기), 사진, 오늘 메모를 입력받는다. (PLAN 8번, 화면 단순화)
+// Design Ref: §5.3 홈 화면 — 운동 이름을 입력해 확인하면 안내 그림이 나오고, 이어서 사진·메모를 입력받는다. (PLAN 8번, 화면 단순화)
+// 입력 화면은 세로 스크롤이 없게 한 화면에 담고, 결과는 입력 화면을 대신하는 별도 화면으로 보여 준다.
 // 입력 검사(PLAN 9)와 서버 호출·결과 영역(PLAN 12)을 연결했다. 예외 상황(13), 하루 횟수 제한(14), 평가(15)는 이후 작업이다.
 // 사진·메모는 이 화면의 메모리에만 두고 어디에도 저장하지 않는다.
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES } from "@/lib/exercises";
+import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES, matchExercise } from "@/lib/exercises";
 import FeedbackResult, { PainNotice } from "@/components/FeedbackResult";
 import { toSevereResponse } from "@/lib/feedback";
 import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
-import { EXERCISE_IDS } from "@/lib/types";
 import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
-import { MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
+import { EXERCISE_OTHER_MAX_LENGTH, MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
 import type { FeedbackFieldErrors } from "@/lib/validate";
 
 const subscribeNothing = () => () => {};
@@ -23,9 +23,12 @@ export default function Home() {
   // 하루 사용 횟수는 브라우저에서만 읽을 수 있다. 서버에서 그린 화면과 달라서 생기는 오류를 막으려고 숨겨 둔 상태로 시작한다.
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
 
+  // 입력창의 글자와, "확인"을 눌러 정해진 운동을 따로 둔다. 확인 전에는 안내 그림을 보여 주지 않는다.
+  const [exerciseText, setExerciseText] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const [exerciseId, setExerciseId] = useState<ExerciseId>("squat");
   const [exerciseOther, setExerciseOther] = useState("");
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [memo, setMemo] = useState("");
@@ -71,15 +74,30 @@ export default function Home() {
   // 입력 검사 → (심한 증상이면 보내지 않고 안내) → 사진 줄이기 → 서버에 요청 → 결과 표시
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void sendFeedback(false);
+    if (!confirmed) confirmExercise();
+    else void sendFeedback(false);
   }
 
-  /** "아니요, 운동 다시 고를게요": 사진·메모는 그대로 두고 운동 선택 칸으로 이동한다. */
+  /** 입력한 운동 이름을 확인한다. 목록에 있으면 그 운동, 없으면 '기타'(베타)로 본다. */
+  function confirmExercise() {
+    const name = exerciseText.trim();
+    if (name === "") {
+      setErrors({ exerciseOther: "운동 이름을 입력해 주세요." });
+      return;
+    }
+    const id = matchExercise(name);
+    setExerciseId(id);
+    setExerciseOther(id === "other" ? name : "");
+    setConfirmed(true);
+    clearResult();
+  }
+
+  /** "아니요, 운동 다시 고를게요": 사진·메모는 그대로 두고 운동 이름 입력 화면으로 돌아간다. */
   function handleReselect() {
     setResult(null);
-    const select = document.getElementById("exercise");
-    select?.scrollIntoView({ block: "center" });
-    select?.focus();
+    setConfirmed(false);
+    // 입력창이 다시 그려진 뒤에 커서를 둔다.
+    setTimeout(() => document.getElementById("exercise")?.focus(), 0);
   }
 
   /** @param exerciseConfirmed 운동·사진 불일치 확인에서 "맞다"고 답한 재요청이면 true */
@@ -144,8 +162,6 @@ export default function Home() {
         return;
       }
       const feedback = (await response.json()) as FeedbackResponse;
-      // 다시 촬영이면 운동 안내 카드를 다시 펼쳐 보여 준다.
-      if (feedback.status === "retake") setGuideOpen(true);
       setResult(feedback);
     } catch (error) {
       if (error instanceof ImagePrepareError) setErrors({ photo: error.message });
@@ -158,180 +174,195 @@ export default function Home() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5" hidden={!isClient}>
-      {/* 1. 운동 고르기: 네 개 중 하나를 바로 누른다. */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between">
-          <h2 id="exercise-label" className="sf-h2">어떤 운동인가요?</h2>
-          <p className="text-xs text-foreground/60">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3" hidden={!isClient}>
+      {result ? (
+        /* 결과 화면: 입력 화면을 대신한다. 입력한 사진·메모는 그대로 남아 있어 "다시 촬영"으로 돌아갈 수 있다. */
+        <>
+          {result.status !== "mismatch" && (
+            <button type="button" onClick={() => setResult(null)} className="sf-btn-secondary self-start">
+              ← 다시 촬영하기
+            </button>
+          )}
+          <FeedbackResult
+            result={result}
+            guide={guide}
+            onConfirmExercise={() => void sendFeedback(true)}
+            onReselect={handleReselect}
+            busy={checking}
+          />
+        </>
+      ) : !confirmed ? (
+        /* 1단계: 운동 이름 입력 */
+        <div className="flex flex-col gap-4 pt-6">
+          <h1 className="sf-title">어떤 운동을 할까요?</h1>
+          <p className="text-sm text-foreground/70">운동 이름을 입력하고 확인을 눌러 주세요. (예: 스쿼트, 런지, 플랭크)</p>
+          <input
+            id="exercise"
+            type="text"
+            value={exerciseText}
+            onChange={(event) => {
+              setExerciseText(event.target.value);
+              setErrors({});
+            }}
+            maxLength={EXERCISE_OTHER_MAX_LENGTH}
+            placeholder="운동 이름"
+            aria-label="운동 이름"
+            aria-invalid={errors.exerciseOther ? true : undefined}
+            autoComplete="off"
+            className="sf-input"
+          />
+          <FieldError message={errors.exerciseOther} />
+          <button type="submit" className="sf-btn">확인</button>
+          <p className="text-center text-xs text-foreground/60">
             오늘 남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
           </p>
         </div>
-        <div
-          id="exercise"
-          role="radiogroup"
-          aria-labelledby="exercise-label"
-          tabIndex={-1}
-          className="grid grid-cols-4 gap-2 outline-none"
-        >
-          {EXERCISE_IDS.map((id) => (
+      ) : (
+        /* 2단계: 안내 그림을 보고 사진·메모를 입력. 한 화면에 들어가도록 줄여 담는다. */
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="sf-h2">{exerciseId === "other" ? exerciseOther : guide.name}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmed(false);
+                  clearResult();
+                }}
+                className="min-h-11 px-1 text-sm font-medium text-accent underline underline-offset-4"
+              >
+                바꾸기
+              </button>
+            </div>
+            <p className="text-xs text-foreground/60">
+              남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
+            </p>
+          </div>
+
+          <section aria-label={`운동 안내 ${guide.name}`} className="flex flex-col gap-1 rounded-2xl bg-foreground/[0.04] p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
+            <img src={guide.imagePath} alt={guide.imageAlt} className="h-[16dvh] max-h-40 w-full rounded-xl bg-white object-contain" />
+            {exerciseId === "other" && (
+              <p className="text-xs text-foreground/70">베타 · 정확도 미보장 (목록에 없는 운동)</p>
+            )}
+            <p className="text-sm"><strong>찍을 순간</strong> · {guide.shootMoment}</p>
+            <p className="text-xs text-foreground/70">{guide.cameraNote}</p>
             <button
-              key={id}
               type="button"
-              role="radio"
-              aria-checked={exerciseId === id}
-              onClick={() => {
-                setExerciseId(id);
+              onClick={() => setStepsOpen(true)}
+              className="min-h-11 self-start text-sm font-medium text-accent underline underline-offset-4"
+            >
+              하는 법·유의사항 보기
+            </button>
+          </section>
+
+          {/* 사진: 한 줄. 고르면 작은 미리보기가 보인다. */}
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="photo"
+              className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-foreground/20 p-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
+            >
+              {photo && previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- 사용자가 고른 사진의 임시 미리보기라 최적화 대상이 아니다
+                <img src={previewUrl} alt="선택한 자세 사진 미리보기" className="size-10 shrink-0 rounded-lg object-cover" />
+              ) : null}
+              <span className="flex flex-col">
+                <span className="text-sm font-medium">{photo ? "사진 선택됨 · 눌러서 바꾸기" : "사진 찍기 · 앨범에서 고르기"}</span>
+                <span className="text-xs text-foreground/60">전신이 나오게, 옆모습으로, 얼굴은 가려 주세요</span>
+              </span>
+              <input
+                id="photo"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handlePhoto}
+                className="sr-only"
+              />
+            </label>
+            <FieldError message={errors.photo} />
+          </div>
+
+          {/* 메모 */}
+          <div className="flex flex-col gap-1">
+            <label htmlFor="memo" className="text-sm font-semibold">
+              오늘 메모 <span className="font-normal text-foreground/60">(선택)</span>
+            </label>
+            <textarea
+              id="memo"
+              value={memo}
+              onChange={(event) => {
+                setMemo(event.target.value);
                 clearResult();
               }}
-              className="sf-chip"
-            >
-              {EXERCISE_GUIDES[id].name}
-            </button>
-          ))}
-        </div>
-        {exerciseId === "other" && (
-          <input
-            type="text"
-            value={exerciseOther}
-            onChange={(event) => {
-              setExerciseOther(event.target.value);
-              clearResult();
-            }}
-            maxLength={50}
-            placeholder="운동 이름 (예: 데드리프트)"
-            aria-label="운동 이름"
-            aria-invalid={errors.exerciseOther ? true : undefined}
-            className="sf-input"
-          />
-        )}
-        <FieldError message={errors.exerciseOther} />
-      </div>
+              maxLength={MEMO_MAX_LENGTH}
+              rows={1}
+              placeholder="예: 무릎이 아파요"
+              className="sf-input py-2"
+            />
+            <FieldError message={errors.memo} />
+          </div>
 
-      {/* 운동 안내: 그림과 핵심 두 줄만 먼저 보이고, 하는 법은 눌러서 본다. */}
-      <section aria-label={`운동 안내 ${guide.name}`} className="flex flex-col gap-3 rounded-2xl bg-foreground/[0.04] p-4">
-        {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
-        <img src={guide.imagePath} alt={guide.imageAlt} className="w-full rounded-xl bg-white" />
-        <p className="text-sm"><strong>찍을 순간</strong> · {guide.shootMoment}</p>
-        <p className="text-sm text-foreground/70">{guide.cameraNote}</p>
-        <button
-          type="button"
-          onClick={() => setGuideOpen((open) => !open)}
-          aria-expanded={guideOpen}
-          aria-controls="guide-body"
-          className="min-h-11 self-start text-sm font-medium underline underline-offset-4"
+          <button type="submit" disabled={checking} className="sf-btn">
+            {checking ? "분석 중… (최대 30초)" : "피드백 받기"}
+          </button>
+          {limitReached && (
+            <div className="flex flex-col gap-3">
+              <p role="alert" className="text-sm font-medium">
+                오늘은 {DAILY_LIMIT}회를 모두 사용했어요. 내일 다시 이용해 주세요.
+              </p>
+              {detectPain(memo) && <PainNotice />}
+            </div>
+          )}
+          {requestError && (
+            <div className="flex flex-col gap-3">
+              <p role="alert" className="sf-error">
+                {requestError}
+              </p>
+              {/* 서버 응답이 없어도 통증 안내는 사라지지 않는다. (메모는 브라우저가 직접 감지한다.) */}
+              {detectPain(memo) && <PainNotice />}
+              <button
+                type="button"
+                onClick={() => void sendFeedback(lastConfirmedRef.current)}
+                disabled={checking}
+                className="sf-btn-secondary"
+              >
+                다시 시도
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 하는 법·유의사항: 화면 아래에서 올라오는 창 (입력 화면이 길어지지 않게) */}
+      {stepsOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${guide.name} 하는 법`}
+          className="fixed inset-0 z-20 flex items-end bg-black/40"
+          onClick={() => setStepsOpen(false)}
         >
-          {guideOpen ? "자세히 접기" : "하는 법 자세히 보기"}
-        </button>
-        {guideOpen && (
-          <div id="guide-body" className="flex flex-col gap-3 text-sm">
-            {guide.steps.length > 0 && (
+          <div
+            className="mx-auto flex max-h-[80dvh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-t-2xl bg-background p-4 text-sm"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="sf-h2">{guide.name} 하는 법</h2>
+            {guide.steps.length > 0 ? (
               <ol className="list-decimal space-y-1 pl-5">
                 {guide.steps.map((step) => (
                   <li key={step}>{step}</li>
                 ))}
               </ol>
+            ) : (
+              <p className="text-foreground/70">이 운동은 정해 둔 안내가 없어요. 평소 하던 자세 그대로 찍어 주세요.</p>
             )}
             <ul className="list-disc space-y-1 pl-5 text-foreground/70">
               {COMMON_GUIDE_NOTES.map((note) => (
                 <li key={note}>{note}</li>
               ))}
             </ul>
+            <button type="button" onClick={() => setStepsOpen(false)} className="sf-btn">닫기</button>
           </div>
-        )}
-      </section>
-
-      {/* 2. 사진: 큰 영역을 누르면 촬영하거나 앨범에서 고른다. */}
-      <div className="flex flex-col gap-2">
-        <h2 className="sf-h2">자세 사진</h2>
-        <label
-          htmlFor="photo"
-          className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-foreground/20 p-3 text-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2"
-        >
-          {photo && previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- 사용자가 고른 사진의 임시 미리보기라 최적화 대상이 아니다
-            <img src={previewUrl} alt="선택한 자세 사진 미리보기" className="max-h-72 w-full rounded-lg object-contain" />
-          ) : (
-            <>
-              <span className="text-base font-medium">사진 찍기 · 앨범에서 고르기</span>
-              <span className="text-xs text-foreground/60">전신이 나오게, 옆모습으로, 얼굴은 가려 주세요</span>
-            </>
-          )}
-          <input
-            id="photo"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handlePhoto}
-            className="sr-only"
-          />
-        </label>
-        {photo && <p className="text-center text-xs text-foreground/60">다른 사진으로 바꾸려면 사진을 다시 누르세요</p>}
-        <FieldError message={errors.photo} />
-      </div>
-
-      {/* 3. 메모 */}
-      <div className="flex flex-col gap-2">
-        <label htmlFor="memo" className="sf-h2">
-          오늘 메모 <span className="text-sm font-normal text-foreground/60">(선택)</span>
-        </label>
-        <textarea
-          id="memo"
-          value={memo}
-          onChange={(event) => {
-            setMemo(event.target.value);
-            clearResult();
-          }}
-          maxLength={MEMO_MAX_LENGTH}
-          rows={2}
-          placeholder="예: 무릎이 아파요"
-          className="sf-input py-2"
-        />
-        {memo.length > MEMO_MAX_LENGTH - 100 && (
-          <p className="text-right text-xs text-foreground/60">{memo.length}/{MEMO_MAX_LENGTH}</p>
-        )}
-        <FieldError message={errors.memo} />
-      </div>
-
-      <button
-        type="submit"
-        disabled={checking}
-        className="sf-btn"
-      >
-        {checking ? "분석 중… (최대 30초)" : "피드백 받기"}
-      </button>
-      {limitReached && (
-        <div className="-mt-2 flex flex-col gap-3">
-          <p role="alert" className="text-sm font-medium">
-            오늘은 {DAILY_LIMIT}회를 모두 사용했어요. 내일 다시 이용해 주세요.
-          </p>
-          {detectPain(memo) && <PainNotice />}
         </div>
-      )}
-      {requestError && (
-        <div className="-mt-2 flex flex-col gap-3">
-          <p role="alert" className="sf-error">
-            {requestError}
-          </p>
-          {/* 서버 응답이 없어도 통증 안내는 사라지지 않는다. (메모는 브라우저가 직접 감지한다.) */}
-          {detectPain(memo) && <PainNotice />}
-          <button
-            type="button"
-            onClick={() => void sendFeedback(lastConfirmedRef.current)}
-            disabled={checking}
-            className="sf-btn-secondary"
-          >
-            다시 시도
-          </button>
-        </div>
-      )}
-      {result && (
-        <FeedbackResult
-          result={result}
-          guide={guide}
-          onConfirmExercise={() => void sendFeedback(true)}
-          onReselect={handleReselect}
-          busy={checking}
-        />
       )}
     </form>
   );

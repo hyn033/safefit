@@ -79,3 +79,22 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     imageAlt: "옆에서 전신이 보이도록 카메라를 두는 위치를 그린 그림",
   },
 };
+
+/** 입력한 이름으로 부르는 말 (띄어쓰기·대소문자 무시, 끝의 "운동"·"자세"는 뗀다) */
+const EXERCISE_ALIASES: Record<Exclude<ExerciseId, "other">, string[]> = {
+  squat: ["스쿼트", "스쿼츠", "squat"],
+  lunge: ["런지", "런쥐", "lunge"],
+  plank: ["플랭크", "플랭", "plank"],
+};
+
+/**
+ * 사용자가 입력한 운동 이름이 안내 카드가 있는 운동이면 그 id를, 아니면 'other'(기타, 베타)를 돌려준다.
+ * 예) "스쿼트", "Squat 운동" → squat / "데드리프트" → other
+ */
+export function matchExercise(input: string): ExerciseId {
+  const key = input.replace(/\s+/g, "").toLowerCase().replace(/(운동|자세)$/, "");
+  for (const [id, aliases] of Object.entries(EXERCISE_ALIASES)) {
+    if (aliases.includes(key)) return id as ExerciseId;
+  }
+  return "other";
+}

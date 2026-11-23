@@ -41,7 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <ProfileEditLink />
           </header>
 
-          <main className="flex-1 px-4 pt-4 pb-20">
+          <main className="flex-1 px-4 pt-2 pb-14">
             {/* Design Ref: §5.1 — 동의가 없으면 /consent로, 몸 정보가 없으면 /profile로 보낸다. */}
             <AccessGate>{children}</AccessGate>
           </main>
