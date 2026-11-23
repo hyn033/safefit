@@ -1,7 +1,7 @@
 // Design Ref: §3.1 — 입력 검사 규칙. 브라우저와 서버가 같은 규칙을 쓰도록 순수 함수로 만든다.
-// 지금은 몸 정보 입력 화면(PLAN 5번)에 필요한 검사만 있고, 사진·요청 검사는 PLAN 9번에서 이어서 추가한다.
+// 몸 정보 검사(PLAN 5번)와 피드백 요청 입력 검사(PLAN 9번)가 들어 있다.
 
-import type { Experience, InjuryPart, Profile } from "./types";
+import type { Experience, ExerciseId, InjuryPart, Profile } from "./types";
 
 /** 체중 허용 범위 (kg, 초안) */
 export const WEIGHT_MIN_KG = 20;
@@ -72,4 +72,62 @@ export function validateProfileForm(values: ProfileFormValues): ProfileFormResul
   if (injuries.includes("other")) profile.injuryOther = injuryOther;
 
   return { ok: true, profile };
+}
+
+// ─────────────────────────────────────────────
+// 피드백 요청 입력 검사 (홈 화면, PLAN 9번)
+// ─────────────────────────────────────────────
+
+/** 올릴 수 있는 사진 형식 (Design Ref: §3.1) */
+export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+/** 줄이기 전 원본 사진 크기 상한 (바이트). 너무 큰 파일은 브라우저가 줄이다 멈출 수 있어 막는다. */
+export const MAX_ORIGINAL_PHOTO_BYTES = 20 * 1024 * 1024;
+export const MEMO_MAX_LENGTH = 500;
+export const EXERCISE_OTHER_MAX_LENGTH = 50;
+
+export const PHOTO_FORMAT_MESSAGE = "JPEG·PNG·WebP 사진을 올려 주세요.";
+
+/** 사진 파일 하나의 형식·크기를 검사한다. 문제가 없으면 null, 있으면 안내 문구 */
+export function validatePhotoFile(file: { type: string; size: number }): string | null {
+  if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) return PHOTO_FORMAT_MESSAGE;
+  if (file.size === 0) return "빈 사진입니다. 다른 사진을 골라 주세요.";
+  if (file.size > MAX_ORIGINAL_PHOTO_BYTES) return "사진이 너무 커요. 20MB 이하 사진을 올려 주세요.";
+  return null;
+}
+
+/** 홈 화면의 입력값 (아직 검사하지 않은 상태) */
+export interface FeedbackFormValues {
+  exerciseId: ExerciseId;
+  exerciseOther: string;
+  /** 사진을 고르지 않았으면 null */
+  photo: { type: string; size: number } | null;
+  memo: string;
+}
+
+export type FeedbackFieldName = "exerciseOther" | "photo" | "memo";
+export type FeedbackFieldErrors = Partial<Record<FeedbackFieldName, string>>;
+
+/** 홈 화면 입력을 검사한다. 오류가 없으면 빈 객체 (Design Ref: §3.1) */
+export function validateFeedbackForm(values: FeedbackFormValues): FeedbackFieldErrors {
+  const errors: FeedbackFieldErrors = {};
+
+  if (values.exerciseId === "other") {
+    const name = values.exerciseOther.trim();
+    if (name === "") errors.exerciseOther = "운동 이름을 입력해 주세요.";
+    else if (name.length > EXERCISE_OTHER_MAX_LENGTH) {
+      errors.exerciseOther = `운동 이름은 ${EXERCISE_OTHER_MAX_LENGTH}자 이내로 입력해 주세요.`;
+    }
+  }
+
+  if (!values.photo) errors.photo = "자세 사진을 올려 주세요.";
+  else {
+    const photoError = validatePhotoFile(values.photo);
+    if (photoError) errors.photo = photoError;
+  }
+
+  if (values.memo.length > MEMO_MAX_LENGTH) {
+    errors.memo = `메모는 ${MEMO_MAX_LENGTH}자 이내로 써 주세요.`;
+  }
+
+  return errors;
 }
