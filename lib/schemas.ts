@@ -2,7 +2,7 @@
 // 서버에서만 쓴다. (화면에서 쓰면 브라우저로 내려가는 코드가 늘어나므로 화면용 검사는 lib/validate.ts에 따로 둔다.)
 
 import { z } from "zod";
-import { EXERCISE_IDS, EXPERIENCE_LEVELS, GENDERS, INJURY_PARTS } from "./types";
+import { EXERCISE_IDS, EXPERIENCE_LEVELS, GENDERS, INJURY_PARTS, OVERLAY_PARTS } from "./types";
 import { HEIGHT_MAX_CM, HEIGHT_MIN_CM, WEIGHT_MAX_KG, WEIGHT_MIN_KG } from "./validate";
 
 /** 사진 data URL 허용 형식: JPEG·PNG·WebP (Design Ref: §3.1) */
@@ -70,28 +70,25 @@ const textList = (maxItems: number, maxLength: number) =>
 /** 모델은 쓰지 않는 항목을 빈 글자("")로 채우기도 하므로, 빈 글자는 "없음"으로 본다. */
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 
-/** 선 하나. 좌표는 0~1 비율이어야 하고, 시작·끝이 같은 점이면 선이 아니므로 버린다. */
-const overlayLineSchema = z.object({
-  x1: z.number().min(0).max(1),
-  y1: z.number().min(0).max(1),
-  x2: z.number().min(0).max(1),
-  y2: z.number().min(0).max(1),
+/** 부위 하나의 비교 결과 */
+const overlayItemSchema = z.object({
+  part: z.enum(OVERLAY_PARTS),
   kind: z.enum(["good", "fix"]),
 });
 
 /**
- * 선 목록. 모양이 틀린 선은 답변 전체를 실패시키지 않고 그 선만 버린다. (선은 덤이라 없어도 피드백은 보여 줄 수 있다)
- * 최대 6개까지만 쓴다.
+ * 부위별 결과 목록. 모양이 틀린 항목은 답변 전체를 실패시키지 않고 그 항목만 버린다. (선은 덤이라 없어도 피드백은 보여 줄 수 있다)
+ * 같은 부위가 여러 번 나오면 앞의 것만 쓴다.
  */
 const overlaySchema = z
   .array(z.unknown())
   .nullish()
-  .transform((items) =>
-    (items ?? [])
-      .map((item) => overlayLineSchema.safeParse(item))
-      .flatMap((parsed) => (parsed.success && (parsed.data.x1 !== parsed.data.x2 || parsed.data.y1 !== parsed.data.y2) ? [parsed.data] : []))
-      .slice(0, 6),
-  );
+  .transform((items) => {
+    const seen = new Set<string>();
+    return (items ?? [])
+      .map((item) => overlayItemSchema.safeParse(item))
+      .flatMap((parsed) => (parsed.success && !seen.has(parsed.data.part) && seen.add(parsed.data.part) ? [parsed.data] : []));
+  });
 
 export const aiAnswerSchema = z
   .object({

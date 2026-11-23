@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // 삭제 대기 폴더(CLAUDE.md 5번)는 검사하지 않는다.
     "trash-can/**",
+    // 가져다 둔 몸 인식 실행 파일(외부에서 만든 코드)은 검사하지 않는다.
+    "public/mediapipe/**",
   ]),
 ]);
 

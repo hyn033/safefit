@@ -4,9 +4,10 @@
 // 다시 촬영·운동 불일치 확인은 PLAN 13번, "도움이 됐나요?" 평가는 PLAN 15번에서 만들었다.
 // 안내 문구(AI 주의·의료 아님·통증·부상 부위·심한 증상)는 코드가 붙인 notices를 보고 보여 준다.
 
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
+import { findPartPaths, type PartPaths } from "@/lib/pose";
 import type { ExerciseGuide } from "@/lib/exercises";
-import type { FeedbackResponse, OverlayLine, Verdict } from "@/lib/types";
+import type { FeedbackResponse, OverlayItem, Verdict } from "@/lib/types";
 
 const VERDICT_LABELS: Record<Verdict, string> = {
   similar: "정석과 거의 같음",
@@ -54,25 +55,52 @@ function Section({ title, items, numbered = false }: { title: string; items?: st
 }
 
 /**
- * 내가 올린 사진 위에 AI가 짚은 선을 겹쳐 그린다. (사진은 이 화면 안에서만 쓰고 저장하지 않는다)
- * 좌표는 0~1 비율이라 사진 크기가 달라도 같은 자리에 그려진다.
+ * 내가 올린 사진 위에 정석과 비교한 결과를 선으로 겹쳐 그린다. (사진은 이 화면 안에서만 쓰고 저장하지 않는다)
+ * 선의 위치는 브라우저의 몸 인식이 찾고, 초록(정석과 같음)·빨강(정석과 다름)은 AI의 부위별 비교가 정한다.
  */
-function PhotoOverlay({ photoUrl, lines }: { photoUrl: string; lines: OverlayLine[] }) {
+function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayItem[] }) {
+  // 몸 위치: undefined = 찾는 중, null = 찾지 못함
+  const [paths, setPaths] = useState<PartPaths | null | undefined>(undefined);
+
+  async function handleLoad(event: SyntheticEvent<HTMLImageElement>) {
+    if (items.length === 0) {
+      setPaths(null);
+      return;
+    }
+    try {
+      setPaths(await findPartPaths(event.currentTarget));
+    } catch {
+      setPaths(null);
+    }
+  }
+
+  const segments = items.flatMap((item) => {
+    const points = paths?.[item.part];
+    if (!points) return [];
+    return points.slice(1).map((end, index) => ({ from: points[index], to: end, kind: item.kind }));
+  });
+  const hasItems = items.length > 0;
+
   return (
     <figure className="flex flex-col gap-2">
       <div className="relative mx-auto w-full max-w-xs overflow-hidden rounded-2xl bg-foreground/5">
         {/* eslint-disable-next-line @next/next/no-img-element -- 내가 올린 사진의 임시 주소라 최적화 대상이 아니다 */}
-        <img src={photoUrl} alt="내가 올린 자세 사진에 선을 그어 표시한 그림" className="block max-h-[42dvh] w-full object-contain" />
+        <img
+          src={photoUrl}
+          alt="내가 올린 자세 사진에 정석과 비교한 선을 그어 표시한 그림"
+          onLoad={handleLoad}
+          className="block max-h-[42dvh] w-full object-contain"
+        />
         <svg viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true" className="absolute inset-0 size-full">
-          {lines.map((line, index) => (
+          {segments.map((segment, index) => (
             <line
               key={index}
-              x1={line.x1}
-              y1={line.y1}
-              x2={line.x2}
-              y2={line.y2}
-              stroke={line.kind === "good" ? "#22c55e" : "#ef4444"}
-              strokeWidth={4}
+              x1={segment.from[0]}
+              y1={segment.from[1]}
+              x2={segment.to[0]}
+              y2={segment.to[1]}
+              stroke={segment.kind === "good" ? "#22c55e" : "#ef4444"}
+              strokeWidth={5}
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
             />
@@ -80,13 +108,17 @@ function PhotoOverlay({ photoUrl, lines }: { photoUrl: string; lines: OverlayLin
         </svg>
       </div>
       <figcaption className="text-center text-xs text-foreground/70">
-        {lines.length > 0 ? (
+        {!hasItems ? (
+          "내가 올린 사진이에요."
+        ) : paths === undefined ? (
+          "몸 위치를 찾는 중이에요…"
+        ) : segments.length > 0 ? (
           <>
             <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 정석과 같은 곳,{" "}
-            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 정석과 다른 곳이에요. AI가 대략 표시한 거라 위치가 어긋날 수 있어요.
+            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 정석과 다른 곳이에요. 몸 위치는 자동으로 찾은 거라 조금 어긋날 수 있어요.
           </>
         ) : (
-          "내가 올린 사진이에요."
+          "사진에서 몸 위치를 찾지 못해 선은 표시하지 못했어요."
         )}
       </figcaption>
     </figure>
@@ -208,7 +240,7 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
       {result.status === "ok" && (
         <>
           {/* 사진은 선이 없어도 항상 보여 준다. */}
-          {photoUrl && <PhotoOverlay photoUrl={photoUrl} lines={result.overlay ?? []} />}
+          {photoUrl && <PhotoOverlay photoUrl={photoUrl} items={result.overlay ?? []} />}
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               {result.verdict && (

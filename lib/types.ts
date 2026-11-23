@@ -86,15 +86,16 @@ export type FeedbackStatus = "ok" | "retake" | "mismatch" | "severe";
 /** 정석과의 차이 단계: 거의 같음 / 조금 다름 / 많이 다름 */
 export type Verdict = "similar" | "slight" | "large";
 
+/** 사진 위에 선을 그어 보여 줄 몸 부위: 팔, 등(어깨~엉덩이), 허벅지, 정강이, 목 */
+export const OVERLAY_PARTS = ["arm", "back", "thigh", "shin", "neck"] as const;
+export type OverlayPart = (typeof OVERLAY_PARTS)[number];
+
 /**
- * 사진 위에 그려 줄 선 하나. 좌표는 사진 전체를 0~1로 본 비율이다. (왼쪽 위가 0,0)
- * good = 정석과 일치(초록), fix = 정석과 불일치(빨강)
+ * 부위별 정석 비교 결과. good = 정석과 일치(초록), fix = 정석과 불일치(빨강).
+ * 선의 위치는 AI가 아니라 브라우저의 몸 인식이 정한다. AI는 어느 부위가 같고 다른지만 답한다.
  */
-export interface OverlayLine {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
+export interface OverlayItem {
+  part: OverlayPart;
   kind: "good" | "fix";
 }
 
@@ -129,8 +130,8 @@ export interface FeedbackResponse {
   fixes?: string[];
   /** 메모에 적은 자세 관련 질문에 대한 AI의 답 (질문이 없으면 없음) */
   memoAnswer?: string;
-  /** 사진 위에 그려 줄 선 (최대 6개, 몸 마디를 따라 긋는다. 정석과 같으면 초록, 다르면 빨강. AI가 대략 짚은 위치라 정확하지 않을 수 있다) */
-  overlay?: OverlayLine[];
+  /** 부위별 정석 일치(초록)·불일치(빨강) 결과. 사진 위 선으로 보여 준다. */
+  overlay?: OverlayItem[];
   /** "확실하지 않다" 표시 */
   uncertain?: boolean;
   notices: FeedbackNotices;
