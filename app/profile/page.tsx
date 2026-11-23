@@ -7,6 +7,7 @@
 import { useState, useSyncExternalStore } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { INJURY_LABELS } from "@/lib/labels";
 import { getProfile, saveProfile } from "@/lib/storage";
 import { INJURY_PARTS } from "@/lib/types";
 import type { Experience, InjuryPart, Profile } from "@/lib/types";
@@ -18,16 +19,6 @@ const EXPERIENCE_OPTIONS: { value: Experience; label: string }[] = [
   { value: "under1y", label: "1년 미만" },
   { value: "over1y", label: "1년 이상" },
 ];
-
-const INJURY_LABELS: Record<InjuryPart, string> = {
-  knee: "무릎",
-  back: "허리",
-  shoulder: "어깨",
-  ankle: "발목",
-  wrist: "손목",
-  neck: "목",
-  other: "기타",
-};
 
 /** 저장된 몸 정보를 입력칸 값으로 바꾼다. 없으면 빈 입력칸 */
 function toFormValues(profile: Profile | null): ProfileFormValues {
