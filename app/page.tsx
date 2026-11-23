@@ -7,9 +7,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES } from "@/lib/exercises";
-import FeedbackResult from "@/components/FeedbackResult";
+import FeedbackResult, { PainNotice } from "@/components/FeedbackResult";
 import { toSevereResponse } from "@/lib/feedback";
-import { detectSevere } from "@/lib/safety";
+import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage } from "@/lib/storage";
 import { EXERCISE_IDS } from "@/lib/types";
 import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse } from "@/lib/types";
@@ -33,6 +33,8 @@ export default function Home() {
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<FeedbackResponse | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  // 마지막으로 보낸 요청이 "운동 확인" 재요청이었는지 (다시 시도할 때 그대로 따른다)
+  const lastConfirmedRef = useRef(false);
 
   // 미리보기 주소는 사진을 고를 때 만들고, 바꾸거나 화면을 떠날 때 해제한다.
   const previewRef = useRef<string | null>(null);
@@ -63,9 +65,23 @@ export default function Home() {
   }
 
   // 입력 검사 → (심한 증상이면 보내지 않고 안내) → 사진 줄이기 → 서버에 요청 → 결과 표시
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    void sendFeedback(false);
+  }
+
+  /** "아니요, 운동 다시 고를게요": 사진·메모는 그대로 두고 운동 선택 칸으로 이동한다. */
+  function handleReselect() {
+    setResult(null);
+    const select = document.getElementById("exercise");
+    select?.scrollIntoView({ block: "center" });
+    select?.focus();
+  }
+
+  /** @param exerciseConfirmed 운동·사진 불일치 확인에서 "맞다"고 답한 재요청이면 true */
+  async function sendFeedback(exerciseConfirmed: boolean) {
     if (checking) return;
+    lastConfirmedRef.current = exerciseConfirmed;
     const found = validateFeedbackForm({
       exerciseId,
       exerciseOther,
@@ -90,6 +106,7 @@ export default function Home() {
       exerciseOther: exerciseId === "other" ? exerciseOther.trim() : undefined,
       memo,
       profile,
+      ...(exerciseConfirmed ? { exerciseConfirmed: true } : {}),
     };
 
     // 심한 증상 표현이 있으면 요청을 보내지 않고 안내만 보여 준다. (Design Ref: §2 ②)
@@ -112,7 +129,10 @@ export default function Home() {
         setRequestError(body?.error?.message ?? "잠시 문제가 생겼어요. 다시 시도해 주세요.");
         return;
       }
-      setResult((await response.json()) as FeedbackResponse);
+      const feedback = (await response.json()) as FeedbackResponse;
+      // 다시 촬영이면 운동 안내 카드를 다시 펼쳐 보여 준다.
+      if (feedback.status === "retake") setGuideOpen(true);
+      setResult(feedback);
     } catch (error) {
       if (error instanceof ImagePrepareError) setErrors({ photo: error.message });
       else if (error instanceof DOMException && error.name === "TimeoutError") {
@@ -244,11 +264,31 @@ export default function Home() {
         {checking ? "분석 중… (최대 30초)" : "피드백 받기"}
       </button>
       {requestError && (
-        <p role="alert" className="-mt-2 text-sm text-red-700 dark:text-red-400">
-          {requestError}
-        </p>
+        <div className="-mt-2 flex flex-col gap-3">
+          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+            {requestError}
+          </p>
+          {/* 서버 응답이 없어도 통증 안내는 사라지지 않는다. (메모는 브라우저가 직접 감지한다.) */}
+          {detectPain(memo) && <PainNotice />}
+          <button
+            type="button"
+            onClick={() => void sendFeedback(lastConfirmedRef.current)}
+            disabled={checking}
+            className="min-h-11 rounded-lg border border-foreground px-4 text-sm font-medium disabled:opacity-40"
+          >
+            다시 시도
+          </button>
+        </div>
       )}
-      {result && <FeedbackResult result={result} />}
+      {result && (
+        <FeedbackResult
+          result={result}
+          guide={guide}
+          onConfirmExercise={() => void sendFeedback(true)}
+          onReselect={handleReselect}
+          busy={checking}
+        />
+      )}
     </form>
   );
 }

@@ -2,6 +2,7 @@
 // 다시 촬영·운동 불일치 확인의 자세한 흐름은 PLAN 13번, 평가는 PLAN 15번에서 이어서 만든다.
 // 안내 문구(AI 주의·의료 아님·통증·부상 부위·심한 증상)는 코드가 붙인 notices를 보고 보여 준다.
 
+import type { ExerciseGuide } from "@/lib/exercises";
 import type { FeedbackResponse, Verdict } from "@/lib/types";
 
 const VERDICT_LABELS: Record<Verdict, string> = {
@@ -35,7 +36,27 @@ function Section({ title, items }: { title: string; items?: string[] }) {
   );
 }
 
-export default function FeedbackResult({ result }: { result: FeedbackResponse }) {
+/** 통증 안내. 오류 화면에서도 같은 문구를 쓴다. */
+export function PainNotice() {
+  return (
+    <p className="rounded-lg border border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+      통증이 있다면 운동을 멈추세요. 계속되면 전문가와 상담하세요.
+    </p>
+  );
+}
+
+interface FeedbackResultProps {
+  result: FeedbackResponse;
+  /** 지금 고른 운동의 안내 (다시 촬영 안내에 다시 보여 준다) */
+  guide: ExerciseGuide;
+  /** 운동·사진 불일치에서 "예, 이대로 분석" */
+  onConfirmExercise: () => void;
+  /** 운동·사진 불일치에서 "아니요, 운동 다시 고를게요" */
+  onReselect: () => void;
+  busy: boolean;
+}
+
+export default function FeedbackResult({ result, guide, onConfirmExercise, onReselect, busy }: FeedbackResultProps) {
   const { notices } = result;
   const isSevere = result.status === "severe";
 
@@ -49,15 +70,42 @@ export default function FeedbackResult({ result }: { result: FeedbackResponse })
         </div>
       )}
 
+      {/* 다시 촬영: 분석하지 않고 안내 카드를 다시 보여 준다. */}
       {result.status === "retake" && (
-        <p className="rounded-lg bg-foreground/5 px-3 py-2 text-sm">
-          사진으로 자세를 확인하기 어려워요. 안내를 보고 다시 촬영해 주세요.
-        </p>
+        <div className="flex flex-col gap-3">
+          <p role="alert" className="text-base font-semibold">다시 촬영해 주세요.</p>
+          <p className="text-sm">사진으로 자세를 확인하기 어려워요. 아래 안내대로 다시 찍어 주세요.</p>
+          {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
+          <img src={guide.imagePath} alt={guide.imageAlt} className="w-full rounded-lg" />
+          <p className="text-sm"><strong>찍을 순간</strong>: {guide.shootMoment}</p>
+          <p className="text-sm"><strong>카메라</strong>: {guide.cameraNote}</p>
+          <p className="text-xs text-foreground/70">전신이 나오게, 밝은 곳에서, 옆모습으로 찍어 주세요. 얼굴은 가려 주세요.</p>
+        </div>
       )}
+
+      {/* 운동·사진 불일치: 사용자가 맞는지 확인한다. */}
       {result.status === "mismatch" && (
-        <p className="rounded-lg bg-foreground/5 px-3 py-2 text-sm">
-          선택한 운동과 사진이 달라 보여요. 운동과 사진을 다시 확인해 주세요.
-        </p>
+        <div className="flex flex-col gap-3">
+          <p role="alert" className="text-base font-semibold">선택한 운동과 사진이 달라 보입니다. 맞나요?</p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={onConfirmExercise}
+              disabled={busy}
+              className="min-h-11 rounded-lg bg-foreground px-4 text-sm font-medium text-background disabled:opacity-40"
+            >
+              {busy ? "분석 중…" : "예, 이대로 분석"}
+            </button>
+            <button
+              type="button"
+              onClick={onReselect}
+              disabled={busy}
+              className="min-h-11 rounded-lg border border-foreground px-4 text-sm font-medium disabled:opacity-40"
+            >
+              아니요, 운동 다시 고를게요
+            </button>
+          </div>
+        </div>
       )}
 
       {result.status === "ok" && (
@@ -84,9 +132,7 @@ export default function FeedbackResult({ result }: { result: FeedbackResponse })
 
       {/* 코드가 붙이는 안내: AI 답변과 무관하게 항상 보여 준다. */}
       {notices.pain && !isSevere && (
-        <p className="rounded-lg border border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-          통증이 있다면 운동을 멈추세요. 계속되면 전문가와 상담하세요.
-        </p>
+        <PainNotice />
       )}
       {notices.injuryParts && notices.injuryParts.length > 0 && !isSevere && (
         <p className="rounded-lg border border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
