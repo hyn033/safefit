@@ -22,7 +22,7 @@ export const INJURY_PARTS = [
 export type InjuryPart = (typeof INJURY_PARTS)[number];
 
 /** 운동 목록: 스쿼트, 런지, 플랭크, 기타(목록에 없는 운동) */
-export const EXERCISE_IDS = ["squat", "lunge", "plank", "other"] as const;
+export const EXERCISE_IDS = ["squat", "lunge", "plank", "pushup", "bridge", "other"] as const;
 export type ExerciseId = (typeof EXERCISE_IDS)[number];
 
 // ─────────────────────────────────────────────

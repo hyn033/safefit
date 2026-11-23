@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES, matchExercise } from "@/lib/exercises";
+import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES, SLIDE_EXERCISE_IDS, matchExercise } from "@/lib/exercises";
 import FeedbackResult, { PainNotice } from "@/components/FeedbackResult";
 import { toSevereResponse } from "@/lib/feedback";
 import { detectPain, detectSevere } from "@/lib/safety";
@@ -29,6 +29,10 @@ export default function Home() {
   const [exerciseId, setExerciseId] = useState<ExerciseId>("squat");
   const [exerciseOther, setExerciseOther] = useState("");
   const [stepsOpen, setStepsOpen] = useState(false);
+  // 운동 고르기 슬라이드: 지금 보이는 칸 번호와 직접 입력 칸을 열었는지
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [showOther, setShowOther] = useState(false);
+  const slideRef = useRef<HTMLDivElement>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [memo, setMemo] = useState("");
@@ -78,6 +82,31 @@ export default function Home() {
     else void sendFeedback(false);
   }
 
+  /** 슬라이드에서 운동을 눌러 정한다. */
+  function selectExercise(id: ExerciseId) {
+    setExerciseId(id);
+    setExerciseOther("");
+    setConfirmed(true);
+    clearResult();
+  }
+
+  /** 슬라이드를 옆으로 밀면 지금 보이는 칸 번호(점 표시)를 갱신한다. */
+  function handleSlideScroll() {
+    const box = slideRef.current;
+    if (!box || box.children.length === 0) return;
+    const card = box.children[0] as HTMLElement;
+    const step = card.offsetWidth + 12;
+    setSlideIndex(Math.min(SLIDE_EXERCISE_IDS.length - 1, Math.max(0, Math.round(box.scrollLeft / step))));
+  }
+
+  /** 좌우 버튼으로 한 칸씩 넘긴다. */
+  function moveSlide(direction: 1 | -1) {
+    const box = slideRef.current;
+    if (!box) return;
+    const card = box.children[0] as HTMLElement;
+    box.scrollBy({ left: direction * (card.offsetWidth + 12), behavior: "smooth" });
+  }
+
   /** 입력한 운동 이름을 확인한다. 목록에 있으면 그 운동, 없으면 '기타'(베타)로 본다. */
   function confirmExercise() {
     const name = exerciseText.trim();
@@ -92,12 +121,12 @@ export default function Home() {
     clearResult();
   }
 
-  /** "아니요, 운동 다시 고를게요": 사진·메모는 그대로 두고 운동 이름 입력 화면으로 돌아간다. */
+  /** "아니요, 운동 다시 고를게요": 사진·메모는 그대로 두고 운동 고르기 화면으로 돌아간다. */
   function handleReselect() {
     setResult(null);
     setConfirmed(false);
-    // 입력창이 다시 그려진 뒤에 커서를 둔다.
-    setTimeout(() => document.getElementById("exercise")?.focus(), 0);
+    setSlideIndex(0);
+    setShowOther(false);
   }
 
   /** @param exerciseConfirmed 운동·사진 불일치 확인에서 "맞다"고 답한 재요청이면 true */
@@ -192,27 +221,70 @@ export default function Home() {
           />
         </>
       ) : !confirmed ? (
-        /* 1단계: 운동 이름 입력 */
-        <div className="flex flex-col gap-4 pt-6">
+        /* 1단계: 슬라이드로 운동 고르기. 옆으로 밀어서 보고, 누르면 그 운동으로 정한다. */
+        <div className="flex flex-col gap-3 pt-4">
           <h1 className="sf-title">어떤 운동을 할까요?</h1>
-          <p className="text-sm text-foreground/70">운동 이름을 입력하고 확인을 눌러 주세요. (예: 스쿼트, 런지, 플랭크)</p>
-          <input
-            id="exercise"
-            type="text"
-            value={exerciseText}
-            onChange={(event) => {
-              setExerciseText(event.target.value);
-              setErrors({});
-            }}
-            maxLength={EXERCISE_OTHER_MAX_LENGTH}
-            placeholder="운동 이름"
-            aria-label="운동 이름"
-            aria-invalid={errors.exerciseOther ? true : undefined}
-            autoComplete="off"
-            className="sf-input"
-          />
-          <FieldError message={errors.exerciseOther} />
-          <button type="submit" className="sf-btn">확인</button>
+          <p className="text-sm text-foreground/70">옆으로 밀어서 보고, 하고 싶은 운동을 눌러 주세요.</p>
+          <div className="relative">
+            <div
+              ref={slideRef}
+              onScroll={handleSlideScroll}
+              aria-label="운동 목록"
+              className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {SLIDE_EXERCISE_IDS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => selectExercise(id)}
+                  className="flex w-[72%] shrink-0 snap-center flex-col gap-2 rounded-2xl border border-foreground/15 bg-background p-3 text-left"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
+                  <img src={EXERCISE_GUIDES[id].imagePath} alt="" className="h-[24dvh] max-h-52 w-full rounded-xl bg-white object-contain" />
+                  <span className="sf-h2">{EXERCISE_GUIDES[id].name}</span>
+                  <span className="text-xs text-foreground/60">{EXERCISE_GUIDES[id].shootMoment}</span>
+                </button>
+              ))}
+            </div>
+            {/* 마우스로도 넘길 수 있게 좌우 버튼을 둔다. */}
+            <button type="button" onClick={() => moveSlide(-1)} aria-label="이전 운동" disabled={slideIndex === 0}
+              className="absolute top-1/3 left-0 size-11 rounded-full bg-background/90 text-xl shadow disabled:hidden">‹</button>
+            <button type="button" onClick={() => moveSlide(1)} aria-label="다음 운동" disabled={slideIndex === SLIDE_EXERCISE_IDS.length - 1}
+              className="absolute top-1/3 right-0 size-11 rounded-full bg-background/90 text-xl shadow disabled:hidden">›</button>
+          </div>
+          <div className="flex justify-center gap-2" aria-hidden="true">
+            {SLIDE_EXERCISE_IDS.map((id, index) => (
+              <span key={id} className={`size-2 rounded-full ${index === slideIndex ? "bg-accent" : "bg-foreground/20"}`} />
+            ))}
+          </div>
+
+          {/* 목록에 없는 운동은 직접 입력 (기타, 베타) */}
+          {!showOther ? (
+            <button type="button" onClick={() => setShowOther(true)} className="min-h-11 text-sm font-medium text-accent underline underline-offset-4">
+              목록에 없는 운동은 직접 입력
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <input
+                id="exercise"
+                type="text"
+                value={exerciseText}
+                onChange={(event) => {
+                  setExerciseText(event.target.value);
+                  setErrors({});
+                }}
+                maxLength={EXERCISE_OTHER_MAX_LENGTH}
+                placeholder="운동 이름 (예: 데드리프트)"
+                aria-label="운동 이름"
+                aria-invalid={errors.exerciseOther ? true : undefined}
+                autoComplete="off"
+                autoFocus
+                className="sf-input"
+              />
+              <FieldError message={errors.exerciseOther} />
+              <button type="submit" className="sf-btn-secondary">확인</button>
+            </div>
+          )}
           <p className="text-center text-xs text-foreground/60">
             오늘 남은 횟수 <strong className="text-foreground">{remaining}/{DAILY_LIMIT}</strong>
           </p>
@@ -227,6 +299,8 @@ export default function Home() {
                 type="button"
                 onClick={() => {
                   setConfirmed(false);
+    setSlideIndex(0);
+    setShowOther(false);
                   clearResult();
                 }}
                 className="min-h-11 px-1 text-sm font-medium text-accent underline underline-offset-4"

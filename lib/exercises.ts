@@ -69,6 +69,34 @@ export const EXERCISE_GUIDES: Record<ExerciseId, ExerciseGuide> = {
     imagePath: "/guide/plank.svg",
     imageAlt: "옆에서 본 플랭크 자세 그림",
   },
+  pushup: {
+    id: "pushup",
+    name: "푸시업",
+    steps: [
+      "손을 어깨보다 조금 넓게 짚고 엎드려요.",
+      "머리부터 발끝까지 일직선을 유지해요.",
+      "팔꿈치를 굽혀 가슴을 바닥 가까이 내려요.",
+      "배에 힘을 주고 밀어 올라와요.",
+    ],
+    shootMoment: "가슴이 가장 낮게 내려간 순간",
+    cameraNote: "옆에서 전신이 보이게, 폰을 바닥 가까이 두고 2~3m 떨어져서 찍어요.",
+    imagePath: "/guide/pushup.svg",
+    imageAlt: "옆에서 본 푸시업 자세 그림",
+  },
+  bridge: {
+    id: "bridge",
+    name: "브릿지",
+    steps: [
+      "누워서 무릎을 세우고 발을 엉덩이 쪽으로 당겨요.",
+      "발로 바닥을 밀며 엉덩이를 들어요.",
+      "어깨부터 무릎까지 일직선이 되게 해요.",
+      "허리가 과하게 꺾이지 않게 해요.",
+    ],
+    shootMoment: "엉덩이를 가장 높이 든 순간",
+    cameraNote: "옆에서 전신이 보이게, 폰을 바닥 가까이 두고 2~3m 떨어져서 찍어요.",
+    imagePath: "/guide/bridge.svg",
+    imageAlt: "옆에서 본 브릿지 자세 그림",
+  },
   other: {
     id: "other",
     name: "기타",
@@ -85,6 +113,8 @@ const EXERCISE_ALIASES: Record<Exclude<ExerciseId, "other">, string[]> = {
   squat: ["스쿼트", "스쿼츠", "squat"],
   lunge: ["런지", "런쥐", "lunge"],
   plank: ["플랭크", "플랭", "plank"],
+  pushup: ["푸시업", "푸쉬업", "팔굽혀펴기", "pushup"],
+  bridge: ["브릿지", "브리지", "힙브릿지", "글루트브릿지", "bridge"],
 };
 
 /**
@@ -98,3 +128,6 @@ export function matchExercise(input: string): ExerciseId {
   }
   return "other";
 }
+
+/** 홈 화면 슬라이드에 보여 주는 운동 순서 ('기타'는 슬라이드가 아니라 직접 입력으로 고른다) */
+export const SLIDE_EXERCISE_IDS = ["squat", "lunge", "plank", "pushup", "bridge"] as const;

@@ -26,5 +26,7 @@ export const EXERCISE_LABELS: Record<ExerciseId, string> = {
   squat: "스쿼트",
   lunge: "런지",
   plank: "플랭크",
+  pushup: "푸시업",
+  bridge: "브릿지",
   other: "기타",
 };
