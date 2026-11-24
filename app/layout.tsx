@@ -37,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full bg-foreground/5">
         <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background bg-[linear-gradient(180deg,rgba(122,162,255,0.28),transparent_420px)] bg-no-repeat">
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-2 bg-background/70 px-4 backdrop-blur">
+          <header className="relative z-10 flex h-14 items-center gap-2 px-4">
             <span className="text-xl font-extrabold tracking-tight">
               세이프<span className="text-accent">핏</span>
             </span>
