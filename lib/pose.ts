@@ -253,7 +253,7 @@ const JOINTS: [OverlayPart, OverlayPart][] = [
 ];
 
 /** 관절이 꺾인 정도가 정석과 이만큼(도)까지 다르면 같은 것으로 본다. */
-export const BEND_SAME_DEG = 14;
+export const BEND_SAME_DEG = 28;
 
 /**
  * 내 사진의 선을 정석 사진의 선과 부위별로 비교해, 부위마다 얼마나 다른지 돌려준다.
