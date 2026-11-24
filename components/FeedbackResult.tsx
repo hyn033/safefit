@@ -98,17 +98,19 @@ function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayIte
           className="block h-auto max-h-[42dvh] w-auto max-w-xs"
         />
         <svg viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true" className="absolute inset-0 size-full">
-          {segments.map((segment, index) => {
-            const color = segment.kind === "good" ? "#22c55e" : "#ef4444";
-            return (
-              <g key={index} stroke={color} strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity={0.9}>
-                {/* 얇은 선으로 몸이 가려지지 않게 하고, 관절 자리는 작은 점으로 찍는다 */}
-                <line x1={segment.from[0]} y1={segment.from[1]} x2={segment.to[0]} y2={segment.to[1]} strokeWidth={3} vectorEffect="non-scaling-stroke" />
-                <line x1={segment.from[0]} y1={segment.from[1]} x2={segment.from[0]} y2={segment.from[1]} strokeWidth={8} vectorEffect="non-scaling-stroke" />
-                <line x1={segment.to[0]} y1={segment.to[1]} x2={segment.to[0]} y2={segment.to[1]} strokeWidth={8} vectorEffect="non-scaling-stroke" />
-              </g>
-            );
-          })}
+          {segments.map((segment, index) => (
+            <line
+              key={index}
+              x1={segment.from[0]}
+              y1={segment.from[1]}
+              x2={segment.to[0]}
+              y2={segment.to[1]}
+              stroke={segment.kind === "good" ? "#22c55e" : "#ef4444"}
+              strokeWidth={5}
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
         </svg>
       </div>
       <figcaption className="text-center text-xs text-foreground/70">
