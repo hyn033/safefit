@@ -22,7 +22,8 @@ const RIGHT = { ear: 8, shoulder: 12, elbow: 14, wrist: 16, hip: 24, knee: 26, a
 const MIN_VISIBILITY = 0.3;
 
 type Landmark = { x: number; y: number; visibility?: number };
-type Landmarker = { detect: (image: HTMLImageElement) => { landmarks: Landmark[][] } };
+type BodyMask = { width: number; height: number; getAsFloat32Array(): Float32Array; close(): void };
+type Landmarker = { detect: (image: HTMLImageElement) => { landmarks: Landmark[][]; segmentationMasks?: BodyMask[] } };
 
 let landmarkerPromise: Promise<Landmarker> | null = null;
 
@@ -59,6 +60,8 @@ function loadLandmarker(): Promise<Landmarker> {
           baseOptions: { modelAssetPath: "/mediapipe/pose_landmarker_lite.task", delegate: "CPU" },
           runningMode: "IMAGE",
           numPoses: 1,
+          // 몸이 있는 자리를 알려 주는 마스크: 인식된 관절이 몸 밖으로 벗어났을 때 몸 안으로 당겨 오는 데 쓴다.
+          outputSegmentationMasks: true,
         });
       } finally {
         console.error = original;
@@ -74,6 +77,45 @@ function loadLandmarker(): Promise<Landmarker> {
 /** 몸 인식 모델을 미리 불러와 둔다. (처음 쓸 때 15MB 가까이 내려받느라 비교가 늦어지지 않게, 화면을 열 때 호출한다) */
 export function warmUpPose(): void {
   loadLandmarker().catch(() => {});
+}
+
+/** 몸 안으로 볼 마스크 값 */
+const BODY_MASK_MIN = 0.6;
+/** 몸 안을 찾을 때 훑어 볼 최대 거리 (사진 짧은 변의 비율) */
+const SNAP_MAX_RADIUS = 0.08;
+
+/**
+ * 관절 위치가 몸 마스크 밖이면 가장 가까운 몸 안 자리로 옮기는 함수를 만든다. (선이 몸 밖으로 나가 따로 놀지 않게)
+ * 마스크가 없거나 가까운 곳에 몸이 없으면 원래 위치를 그대로 쓴다.
+ */
+function makeBodySnapper(mask: { width: number; height: number; getAsFloat32Array(): Float32Array } | undefined): (x: number, y: number) => Point {
+  if (!mask) return (x, y) => [x, y];
+  const { width, height } = mask;
+  const data = new Float32Array(mask.getAsFloat32Array()); // 마스크를 닫아도 값이 남도록 복사
+  const inside = (px: number, py: number) => px >= 0 && py >= 0 && px < width && py < height && data[py * width + px] >= BODY_MASK_MIN;
+  return (x, y) => {
+    const px = Math.min(width - 1, Math.max(0, Math.round(x * width)));
+    const py = Math.min(height - 1, Math.max(0, Math.round(y * height)));
+    if (inside(px, py)) return [x, y];
+    const maxRadius = Math.round(Math.min(width, height) * SNAP_MAX_RADIUS);
+    let best: [number, number] | null = null;
+    let bestDistance = Infinity;
+    for (let r = 1; r <= maxRadius && !best; r++) {
+      // 반지름 r인 네모 테두리만 훑어 가장 가까운 몸 픽셀을 찾는다.
+      for (let dy = -r; dy <= r; dy++) {
+        const step = Math.abs(dy) === r ? 1 : 2 * r;
+        for (let dx = -r; dx <= r; dx += step) {
+          if (!inside(px + dx, py + dy)) continue;
+          const distance = dx * dx + dy * dy;
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            best = [px + dx, py + dy];
+          }
+        }
+      }
+    }
+    return best ? [(best[0] + 0.5) / width, (best[1] + 0.5) / height] : [x, y];
+  };
 }
 
 /** 부위를 이루는 관절 이름들 (이어진 순서대로). 팔은 어깨–팔꿈치–손목 */
@@ -115,7 +157,10 @@ export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis
   if (analysisCache.has(key)) return analysisCache.get(key) ?? null;
 
   const landmarker = await loadLandmarker();
-  const pose = withoutInfoLogs(() => landmarker.detect(image)).landmarks[0];
+  const result = withoutInfoLogs(() => landmarker.detect(image));
+  const pose = result.landmarks[0];
+  const snap = makeBodySnapper(result.segmentationMasks?.[0]);
+  result.segmentationMasks?.forEach((mask) => mask.close());
   if (!pose) {
     analysisCache.set(key, null);
     return null;
@@ -127,7 +172,7 @@ export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis
   const point = (index: number): Point | null => {
     const landmark = pose[index];
     if (!landmark || (landmark.visibility ?? 0) < MIN_VISIBILITY) return null;
-    return [landmark.x, landmark.y];
+    return snap(landmark.x, landmark.y);
   };
 
   const paths: PartPaths = {};
@@ -154,7 +199,7 @@ export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis
   if (otherJoints.every((l) => l && (l.visibility ?? 0) >= OTHER_LEG_MIN_VISIBILITY)) {
     const apart = otherJoints.some((l, index) => Math.hypot(l.x - mainJoints[index].x, l.y - mainJoints[index].y) > OTHER_LEG_MIN_DISTANCE);
     if (apart) {
-      const [hip, knee, ankle] = otherJoints.map((l): Point => [l.x, l.y]);
+      const [hip, knee, ankle] = otherJoints.map((l): Point => snap(l.x, l.y));
       const toPixels = (p: Point): Point => [p[0] * image.naturalWidth, p[1] * image.naturalHeight];
       const degrees = (from: Point, to: Point) => {
         const [a, b] = [toPixels(from), toPixels(to)];
