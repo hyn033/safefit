@@ -5,7 +5,7 @@ import Link from "next/link";
 import Mascot from "@/components/Mascot";
 
 const STEPS = [
-  { title: "운동 고르기", text: "스쿼트·런지·플랭크·브릿지 중에서 골라요." },
+  { title: "운동 고르기", text: "내가 하려는 운동을 골라요." },
   { title: "자세 사진 올리기", text: "따라 하기 안내를 보고, 그 순간의 사진을 올려요." },
   { title: "선으로 확인하기", text: "옳은 자세와 같은 곳은 초록, 다른 곳은 빨강으로 보여 드려요." },
 ];
@@ -35,7 +35,7 @@ export default function WelcomePage() {
         ))}
       </ol>
 
-      <Link href="/consent" className="sf-btn w-full text-center">
+      <Link href="/consent" className="sf-btn flex w-full items-center justify-center text-center">
         시작하기
       </Link>
       <p className="text-xs text-foreground/60">참고용 자세 안내이며 의료 진단이 아닙니다.</p>
