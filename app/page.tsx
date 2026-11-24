@@ -32,7 +32,7 @@ async function compareWithStandard(photoUrl: string | null, exerciseId: Exercise
   if (!photoUrl) return undefined;
   try {
     const standardUrl = getGuideImage(EXERCISE_GUIDES[exerciseId], gender);
-    const work = Promise.all([analyzeUrl(photoUrl), analyzeUrl(standardUrl)]).then(([mine, standard]) => compareToStandard(mine, standard));
+    const work = Promise.all([analyzeUrl(photoUrl), analyzeUrl(standardUrl)]).then(([mine, standard]) => compareToStandard(mine, standard, exerciseId === "lunge"));
     return (await Promise.race([work, new Promise<null>((resolve) => setTimeout(() => resolve(null), MEASURE_TIMEOUT_MS))])) ?? undefined;
   } catch {
     return undefined;

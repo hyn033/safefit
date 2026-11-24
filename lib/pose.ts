@@ -261,7 +261,7 @@ export const BEND_SAME_DEG = 14;
  * 각 부위의 각도 차이와, 이어진 관절(엉덩이·무릎)이 꺾인 정도의 차이를 함께 본다. 관절 꺾임이 다르면 그 관절에 닿은 두 부위가 다른 것으로 친다.
  * 양쪽 사진에서 모두 찾은 부위가 2개 미만이면 비교할 수 없으므로 null이다.
  */
-export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnalysis | null): PoseComparison | null {
+export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnalysis | null, bothLegs = false): PoseComparison | null {
   if (!user || !standard) return null;
   const common = COMPARED_PARTS.filter((part) => user.angles[part] && standard.angles[part]);
   if (common.length < 2) return null;
@@ -292,8 +292,8 @@ export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnaly
     }
   }
 
-  // 반대쪽 다리도 보이면 그 다리도 같은 방법으로 비교한다. (옳은 자세 사진에서도 반대쪽 다리가 보이면 그것과, 아니면 보이는 다리와 비교)
-  const others = compareOtherLeg(user, standard, flip, common, mineAngle, refAngle);
+  // 두 다리를 보여 주는 운동(런지)이고 반대쪽 다리도 보이면 그 다리도 같은 방법으로 비교한다. 그 밖의 운동은 한쪽 다리만 본다. (옳은 자세 사진에서도 반대쪽 다리가 보이면 그것과, 아니면 보이는 다리와 비교)
+  const others = bothLegs ? compareOtherLeg(user, standard, flip, common, mineAngle, refAngle) : {};
 
   return {
     parts: common.map((part, index) => ({
