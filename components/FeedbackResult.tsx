@@ -10,9 +10,9 @@ import { getGuideImage, type ExerciseGuide } from "@/lib/exercises";
 import type { FeedbackResponse, Gender, OverlayItem, Verdict } from "@/lib/types";
 
 const VERDICT_LABELS: Record<Verdict, string> = {
-  similar: "정석",
-  slight: "정석과 조금 다름",
-  large: "정석과 많이 다름",
+  similar: "옳은 자세입니다",
+  slight: "조금 옳지 않은 자세입니다",
+  large: "옳지 않은 자세입니다",
 };
 
 /** 차이 단계별 배지 색 (색만으로 구분하지 않도록 글자도 함께 보여 준다) */
@@ -88,7 +88,7 @@ function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayIte
         {/* eslint-disable-next-line @next/next/no-img-element -- 내가 올린 사진의 임시 주소라 최적화 대상이 아니다 */}
         <img
           src={photoUrl}
-          alt="내가 올린 자세 사진에 정석과 비교한 선을 그어 표시한 그림"
+          alt="내가 올린 자세 사진에 옳은 자세와 비교한 선을 그어 표시한 그림"
           onLoad={handleLoad}
           className="block h-auto max-h-[42dvh] w-auto max-w-xs"
         />
@@ -115,8 +115,8 @@ function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayIte
           "몸 위치를 찾는 중이에요…"
         ) : segments.length > 0 ? (
           <>
-            <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 정석과 같은 곳,{" "}
-            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 정석과 다른 곳이에요.
+            <span className="font-semibold text-green-700 dark:text-green-400">초록</span>은 옳은 자세와 같은 곳,{" "}
+            <span className="font-semibold text-red-700 dark:text-red-400">빨강</span>은 옳은 자세와 다른 곳이에요.
           </>
         ) : (
           "사진에서 몸 위치를 찾지 못해 선은 표시하지 못했어요."
@@ -266,7 +266,7 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
               <p className="text-sm leading-relaxed">{result.memoAnswer}</p>
             </section>
           )}
-          <Section title="정석과 다른 점" items={result.differences} />
+          <Section title="옳은 자세와 다른 점" items={result.differences} />
           <Section title="무리가 가는 부분" items={result.problemParts} />
         </>
       )}
