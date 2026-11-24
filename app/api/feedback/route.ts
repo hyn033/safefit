@@ -35,6 +35,14 @@ export async function POST(request: Request): Promise<Response> {
   const deadlineAt = Date.now() + SERVER_DEADLINE_MS;
 
   try {
+    // 다른 사이트가 방문자 브라우저로 몰래 호출하지 못하게 막는다. (출처가 우리 주소와 다르거나 다른 사이트에서 온 요청은 거절)
+    const origin = request.headers.get("origin");
+    if (request.headers.get("sec-fetch-site") === "cross-site" || (origin && new URL(origin).host !== request.headers.get("host"))) {
+      return new Response(null, { status: 403 });
+    }
+    // 우리 화면은 항상 JSON으로 보낸다. 다른 형식이면 사전 확인 없이 도착한 요청일 수 있어 거절한다.
+    if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return errorResponse("INVALID_INPUT");
+
     // 크기: 선언된 크기를 먼저 보고, 실제로 읽은 크기도 다시 확인한다.
     const declaredBytes = Number(request.headers.get("content-length") ?? 0);
     if (declaredBytes > MAX_BODY_BYTES) return errorResponse("IMAGE_TOO_LARGE");

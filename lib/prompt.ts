@@ -54,9 +54,14 @@ JSON 모양:
   "uncertain": true | false
 }`;
 
+/** 사용자가 쓴 글이 줄바꿈이나 <, >로 구분자·지시문처럼 보이게 만들지 못하도록 걸러 낸다. (프롬프트 인젝션 대비) */
+function plain(text: string): string {
+  return text.replace(/[\r\n<>]+/g, " ").trim();
+}
+
 /** 사용자가 고른 운동 이름 ('기타'는 직접 쓴 이름) */
 function exerciseName(request: FeedbackRequest): string {
-  if (request.exerciseId === "other") return request.exerciseOther ?? EXERCISE_LABELS.other;
+  if (request.exerciseId === "other") return request.exerciseOther ? plain(request.exerciseOther) : EXERCISE_LABELS.other;
   return EXERCISE_LABELS[request.exerciseId];
 }
 
@@ -65,7 +70,7 @@ function injuryText(request: FeedbackRequest): string {
   const { profile } = request;
   if (profile.noInjury) return "없음";
   return profile.injuries
-    .map((part) => (part === "other" ? `기타(${profile.injuryOther ?? ""})` : INJURY_LABELS[part]))
+    .map((part) => (part === "other" ? `기타(${plain(profile.injuryOther ?? "")})` : INJURY_LABELS[part]))
     .join(", ");
 }
 
@@ -118,7 +123,8 @@ function careLines(request: FeedbackRequest): string[] {
 /** AI에게 보낼 사용자 쪽 글 (사진은 따로 첨부한다) */
 export function buildUserText(request: FeedbackRequest): string {
   const { profile } = request;
-  const memo = request.memo.trim() === "" ? "없음" : request.memo.trim();
+  // 메모 안의 <, >를 지워 메모가 <<< >>> 구분자를 벗어나지 못하게 한다. (줄바꿈은 메모 모양을 위해 그대로 둔다)
+  const memo = request.memo.trim() === "" ? "없음" : request.memo.replace(/[<>]/g, " ").trim();
 
   return [
     `운동: ${exerciseName(request)}`,

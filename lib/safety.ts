@@ -10,7 +10,7 @@ import type { ExerciseId, InjuryPart, Profile } from "./types";
 // ─────────────────────────────────────────────
 
 /** 통증·불편 어간 (Design Ref: §4.4) */
-export const PAIN_STEMS = ["아프", "아파", "아픈", "아픔", "통증", "쑤시", "쑤셔", "저리", "저려", "찌릿", "불편"] as const;
+export const PAIN_STEMS = ["아프", "아파", "아픈", "아픔", "통증", "쑤시", "쑤셔", "저리", "저려", "찌릿", "불편", "결려", "결리", "시큰", "욱신", "뻐근"] as const;
 
 /** 띄어쓰기가 달라도 잡히도록 공백을 모두 지운다. */
 function compact(text: string): string {
@@ -25,14 +25,17 @@ export function detectPain(memo: string): boolean {
 
 /**
  * 메모에 심한 증상 표현이 있으면 true. 하나라도 해당하면 심한 증상으로 본다.
- * ① 가슴 + 통증·불편 어간, ② 어지러·어지럽, ③ 심한 + 부기·붓·부어, ④ 숨이 차·숨쉬기 힘
+ * ① 가슴 + 통증·불편·답답 표현, 흉통, ② 어지러·어지럽·어질·핑 돌, ③ 심한 + 부기·붓·부어·부었, ④ 숨이 차·숨차·숨막·호흡·숨쉬기 힘, ⑤ 기절·실신
+ * (전문가 확인이 필요한 초안이며, 놓치는 것보다 과하게 잡는 쪽이 안전하다.)
  */
 export function detectSevere(memo: string): boolean {
   const text = compact(memo);
-  if (text.includes("가슴") && detectPain(memo)) return true;
-  if (text.includes("어지러") || text.includes("어지럽")) return true;
-  if (/심(한|하게).{0,10}(부기|붓|부어)/.test(text)) return true;
-  if (text.includes("숨이차") || text.includes("숨쉬기힘")) return true;
+  if (text.includes("가슴") && (detectPain(memo) || text.includes("답답") || text.includes("조이"))) return true;
+  if (text.includes("흉통")) return true;
+  if (["어지러", "어지럽", "어질", "핑돌", "핑핑"].some((word) => text.includes(word))) return true;
+  if (/심(한|하게).{0,10}(부기|붓|부어|부었|부음)/.test(text)) return true;
+  if (["숨이차", "숨차", "숨이가", "숨이막", "숨막", "숨쉬기힘", "숨쉬기어려", "호흡곤란", "호흡이"].some((word) => text.includes(word))) return true;
+  if (text.includes("기절") || text.includes("실신")) return true;
   return false;
 }
 
@@ -71,14 +74,19 @@ export function getInjuryParts(exerciseId: ExerciseId, profile: Profile): string
 // ─────────────────────────────────────────────
 
 /** 진단·치료 표현 (초안) */
-const DIAGNOSIS_WORDS = ["진단", "치료", "처방", "재활", "염증", "디스크", "관절염", "파열", "탈구", "골절", "질환", "증후군"];
+const DIAGNOSIS_WORDS = [
+  "진단", "치료", "처방", "재활", "염증", "디스크", "관절염", "파열", "탈구", "골절", "질환", "증후군",
+  // 영어로 쓴 진단·치료 표현
+  "diagnos", "treatment", "therap", "prescri", "rehabilit", "inflammation", "herniat", "fracture", "arthritis", "tendinitis",
+];
 
 /** 체중을 이유로 한 외모 평가·비난성 표현 (초안) */
 const WEIGHT_BLAME_PATTERNS = [/(체중|몸무게|살|뱃살|비만).{0,8}(때문|탓)/, /뚱뚱|비만|과체중|살찐|살이쪄|살이찐|살쪘/];
 
 /** 글에 진단·치료 표현이나 체중 비난 표현이 있으면 true */
 export function hasBannedExpression(text: string): boolean {
-  const compacted = compact(text);
+  // 공백뿐 아니라 점·기호를 끼워 넣은 표기("치.료")도 잡히도록 글자와 숫자만 남기고 소문자로 맞춘다.
+  const compacted = text.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
   if (DIAGNOSIS_WORDS.some((word) => compacted.includes(word))) return true;
   return WEIGHT_BLAME_PATTERNS.some((pattern) => pattern.test(compacted));
 }

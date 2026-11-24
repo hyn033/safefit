@@ -1,0 +1,8 @@
+# Vercel CLI로 배포할 때 올리지 않을 파일 (비밀 값·테스트 사진·작업용 폴더)
+.env
+.env*
+test-photos/
+trash-can/
+.claude/
+.bkit/
+.git/
