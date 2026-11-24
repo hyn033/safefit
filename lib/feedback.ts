@@ -67,7 +67,8 @@ export function toFeedbackResponse(request: FeedbackRequest, answer: AiAnswer): 
   return {
     ...base,
     verdict,
-    assessment: answer.assessment ?? undefined,
+    // AI가 요약을 비웠는데 다른 곳이 있으면, 코드가 정한 문장으로 최소한의 설명을 남긴다. (판정만 있고 말이 없는 화면을 막는다)
+    assessment: answer.assessment || (judged && judged.issues.length > 0 ? judged.issues.join(" ") : undefined),
     // 코드가 판정했으면 "다른 점"도 코드가 정한 문장을 그대로 쓴다. (AI가 참고 사실 등을 다른 점으로 섞어 쓰지 못하게)
     differences: judged ? judged.issues : withoutMeasureNumbers(request, answer.differences),
     problemParts: noDifferences ? [] : withoutMeasureNumbers(request, answer.problemParts),
