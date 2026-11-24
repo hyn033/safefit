@@ -57,7 +57,7 @@ function loadLandmarker(): Promise<Landmarker> {
       };
       try {
         return await PoseLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: "/mediapipe/pose_landmarker_lite.task", delegate: "CPU" },
+          baseOptions: { modelAssetPath: "/mediapipe/pose_landmarker_full.task", delegate: "CPU" },
           runningMode: "IMAGE",
           numPoses: 1,
           // 몸이 있는 자리를 알려 주는 마스크: 인식된 관절이 몸 밖으로 벗어났을 때 몸 안으로 당겨 오는 데 쓴다.
