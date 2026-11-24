@@ -254,6 +254,8 @@ const JOINTS: [OverlayPart, OverlayPart][] = [
 
 /** 관절이 꺾인 정도가 정석과 이만큼(도)까지 다르면 같은 것으로 본다. */
 export const BEND_SAME_DEG = 28;
+/** 몸을 일직선으로 유지해야 하는 운동(플랭크)은 엉덩이가 솟거나 처지는 것이 곧 틀린 자세라 꺾임을 더 엄격하게 본다. */
+export const BEND_STRICT_DEG = 12;
 
 /**
  * 내 사진의 선을 정석 사진의 선과 부위별로 비교해, 부위마다 얼마나 다른지 돌려준다.
@@ -261,7 +263,7 @@ export const BEND_SAME_DEG = 28;
  * 각 부위의 각도 차이와, 이어진 관절(엉덩이·무릎)이 꺾인 정도의 차이를 함께 본다. 관절 꺾임이 다르면 그 관절에 닿은 두 부위가 다른 것으로 친다.
  * 양쪽 사진에서 모두 찾은 부위가 2개 미만이면 비교할 수 없으므로 null이다.
  */
-export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnalysis | null, bothLegs = false): PoseComparison | null {
+export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnalysis | null, bothLegs = false, bendSameDeg = BEND_SAME_DEG): PoseComparison | null {
   if (!user || !standard) return null;
   const common = COMPARED_PARTS.filter((part) => user.angles[part] && standard.angles[part]);
   if (common.length < 2) return null;
@@ -285,10 +287,10 @@ export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnaly
     const mine = wrap(mineAngle(second, flip) - mineAngle(first, flip));
     const ref = wrap(refAngle(second) - refAngle(first));
     const bendGap = Math.abs(wrap(mine - ref));
-    if (bendGap <= BEND_SAME_DEG) continue;
+    if (bendGap <= bendSameDeg) continue;
     for (const part of [first, second]) {
       const index = common.indexOf(part);
-      gaps[index] = Math.max(gaps[index], SAME_WITHIN_DEG[part] + 1 + (bendGap - BEND_SAME_DEG));
+      gaps[index] = Math.max(gaps[index], SAME_WITHIN_DEG[part] + 1 + (bendGap - bendSameDeg));
     }
   }
 

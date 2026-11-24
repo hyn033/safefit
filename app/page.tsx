@@ -15,7 +15,7 @@ import { detectPain, detectSevere } from "@/lib/safety";
 import { DAILY_LIMIT, getProfile, getUsage, incrementUsage } from "@/lib/storage";
 import type { ApiErrorResponse, ExerciseId, FeedbackRequest, FeedbackResponse, Gender, PoseComparison } from "@/lib/types";
 import { ImagePrepareError, prepareImage } from "@/lib/image";
-import { analyzeUrl, compareToStandard, warmUpPose } from "@/lib/pose";
+import { analyzeUrl, BEND_STRICT_DEG, compareToStandard, warmUpPose } from "@/lib/pose";
 import { MEMO_MAX_LENGTH, validateFeedbackForm } from "@/lib/validate";
 import type { FeedbackFieldErrors } from "@/lib/validate";
 
@@ -32,7 +32,7 @@ async function compareWithStandard(photoUrl: string | null, exerciseId: Exercise
   if (!photoUrl) return undefined;
   try {
     const standardUrl = getGuideImage(EXERCISE_GUIDES[exerciseId], gender);
-    const work = Promise.all([analyzeUrl(photoUrl), analyzeUrl(standardUrl)]).then(([mine, standard]) => compareToStandard(mine, standard, exerciseId === "lunge"));
+    const work = Promise.all([analyzeUrl(photoUrl), analyzeUrl(standardUrl)]).then(([mine, standard]) => compareToStandard(mine, standard, exerciseId === "lunge", exerciseId === "plank" ? BEND_STRICT_DEG : undefined));
     return (await Promise.race([work, new Promise<null>((resolve) => setTimeout(() => resolve(null), MEASURE_TIMEOUT_MS))])) ?? undefined;
   } catch {
     return undefined;
