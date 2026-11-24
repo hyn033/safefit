@@ -28,6 +28,8 @@ function getRedirectPath(
 ): string | null {
   // 아직 확인 중
   if (consented === null || profileSaved === null) return null;
+  // 개인정보 처리 안내는 동의 전에도 볼 수 있어야 한다.
+  if (pathname === "/privacy") return null;
 
   if (!consented) return pathname === CONSENT_PATH ? null : CONSENT_PATH;
   if (pathname === CONSENT_PATH) return "/";
