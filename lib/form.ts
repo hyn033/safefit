@@ -8,9 +8,10 @@ import type { OverlayItem, OverlayPart, PoseComparison, Verdict } from "./types"
 
 /**
  * 부위 각도가 정석과 이만큼(도)까지 다르면 같은 것으로 본다. (사람마다 몸 비율·카메라 기울기가 조금씩 달라서 여유를 둔다)
- * 다리가 자세의 핵심이라 다리(허벅지·정강이)는 더 민감하게 본다. 정석 사진을 남녀가 찍은 것끼리 비교하면 등 0~2도, 다리 0~6도 차이였다.
+ * 다리(허벅지·정강이)를 등보다 조금 더 엄격하게 본다. 정석 사진을 남녀가 찍은 것끼리 비교하면 등 0~2도, 다리 0~6도 차이였고,
+ * 정석이 빨강으로 나온다는 의견이 있어 처음(등 20·다리 15)보다 넓혔다. 사람이 직접 찍은 정석 사진으로 다시 조정이 필요하다.
  */
-export const SAME_WITHIN_DEG: Record<OverlayPart, number> = { back: 20, thigh: 15, shin: 15, arm: 25, neck: 25 };
+export const SAME_WITHIN_DEG: Record<OverlayPart, number> = { back: 25, thigh: 20, shin: 20, arm: 25, neck: 25 };
 /** 이만큼(도) 넘게 다르면 크게 다른 것으로 본다. */
 export const FAR_OVER_DEG = 50;
 
