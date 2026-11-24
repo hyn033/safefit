@@ -9,7 +9,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES, SLIDE_EXERCISE_IDS, getGuideImage } from "@/lib/exercises";
 import FeedbackResult, { PainNotice } from "@/components/FeedbackResult";
-import Mascot from "@/components/Mascot";
 import { BulbIcon, CameraIcon, ChatIcon, DumbbellIcon, SendIcon } from "@/components/Icons";
 import { toSevereResponse } from "@/lib/feedback";
 import { detectPain, detectSevere } from "@/lib/safety";
@@ -265,8 +264,6 @@ export default function Home() {
             <p className="text-sm text-foreground/60">옆으로 넘겨서 운동을 골라 보세요.</p>
           </div>
           <div className="relative">
-            {/* 마스코트가 카드 윗면에 걸터앉은 모양 (카드 위로 살짝 솟아 보인다) */}
-            <Mascot size={64} className="pointer-events-none absolute right-8 -top-[54px] z-10" />
             <div
               ref={slideRef}
               onScroll={handleSlideScroll}

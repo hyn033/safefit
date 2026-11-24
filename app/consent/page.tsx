@@ -7,7 +7,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Mascot from "@/components/Mascot";
 import { saveConsent } from "@/lib/storage";
 
 // Design Ref: §5.4 — 동의 화면 안내 문구. 핵심 문장은 굵게 보여 한눈에 읽히게 하고, 내용은 줄이지 않는다.
@@ -56,11 +55,7 @@ export default function ConsentPage() {
         확인해 주세요
       </h1>
 
-      <ol className="relative mt-6 flex flex-col gap-3">
-        {/* 마스코트가 첫 카드 윗면에 걸터앉은 모양 */}
-        <li aria-hidden="true" className="pointer-events-none absolute right-6 -top-[58px] z-10 list-none">
-          <Mascot size={64} />
-        </li>
+      <ol className="flex flex-col gap-3">
         {NOTICES.map((notice, index) => (
           <li key={notice.title} className="sf-card flex gap-3">
             <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-accent to-accent-deep text-sm font-bold text-accent-foreground shadow-[0_6px_12px_-6px_rgba(33,73,196,0.8)]">

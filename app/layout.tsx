@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AccessGate from "@/components/AccessGate";
 import AppFooter from "@/components/AppFooter";
+import Mascot from "@/components/Mascot";
 import ProfileEditLink from "@/components/ProfileEditLink";
 
 const geistSans = Geist({
@@ -38,8 +39,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-foreground/5">
         <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background bg-[linear-gradient(180deg,rgba(122,162,255,0.28),transparent_420px)] bg-no-repeat">
           <header className="relative z-10 flex h-14 items-center gap-2 px-4">
-            <span className="text-xl font-extrabold tracking-tight">
-              세이프<span className="text-accent">핏</span>
+            <span className="flex items-center gap-1.5 text-xl font-extrabold tracking-tight">
+              <span>
+                세이프<span className="text-accent">핏</span>
+              </span>
+              <Mascot size={34} />
             </span>
             <ProfileEditLink />
           </header>
