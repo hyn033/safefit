@@ -33,11 +33,6 @@ export default function PrivacyPage() {
         <p className="text-sm text-foreground/70">브라우저의 사이트 데이터를 지우면 모두 사라져요. 로그인과 회원가입은 없어요.</p>
       </section>
 
-      <section className="sf-card flex flex-col gap-2">
-        <h2 className="sf-h2">이용 연령</h2>
-        <p className="text-sm">만 14세 이상만 이용할 수 있어요.</p>
-      </section>
-
       <Link href="/safety" className="sf-btn-secondary text-center">
         안전 안내 보기
       </Link>

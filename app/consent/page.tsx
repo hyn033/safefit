@@ -24,7 +24,7 @@ const NOTICES: { title: string; body: string }[] = [
     body: "전신 옆모습이 나오면 충분해요.",
   },
   {
-    title: "만 14세 이상만 이용할 수 있어요",
+    title: "내 정보는 이 브라우저에만 저장돼요",
     body: "몸 정보와 동의 기록은 이 브라우저에만 저장되고, 브라우저의 사이트 데이터를 지우면 사라져요.",
   },
 ];
@@ -77,7 +77,7 @@ export default function ConsentPage() {
           }}
           className="size-5 shrink-0 accent-accent"
         />
-        <span>위 내용을 확인했고, 만 14세 이상입니다</span>
+        <span>위 내용을 확인했고 동의합니다</span>
       </label>
 
       <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-foreground/15 px-3 py-2 text-sm">
