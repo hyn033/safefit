@@ -61,8 +61,8 @@ export default function ConsentPage() {
 
       <ol className="flex flex-col gap-3">
         {NOTICES.map((notice, index) => (
-          <li key={notice.title} className="flex gap-3 rounded-2xl bg-foreground/[0.04] p-4">
-            <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground">
+          <li key={notice.title} className="sf-card flex gap-3">
+            <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-accent to-accent-deep text-sm font-bold text-accent-foreground shadow-[0_6px_12px_-6px_rgba(33,73,196,0.8)]">
               {index + 1}
             </span>
             <div className="flex flex-col gap-1">
@@ -73,7 +73,7 @@ export default function ConsentPage() {
         ))}
       </ol>
 
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-foreground/15 px-3 py-2 text-sm">
+      <label className="sf-card flex min-h-12 cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium">
         <input
           type="checkbox"
           checked={checked}
@@ -86,7 +86,7 @@ export default function ConsentPage() {
         <span>위 내용을 확인했고 동의합니다</span>
       </label>
 
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-foreground/15 px-3 py-2 text-sm">
+      <label className="sf-card flex min-h-12 cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium">
         <input
           type="checkbox"
           checked={healthChecked}
