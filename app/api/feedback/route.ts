@@ -4,6 +4,7 @@
 
 import { FeedbackApiError, requestAiAnswer, SERVER_DEADLINE_MS } from "@/lib/ai";
 import { toFeedbackResponse, toSevereResponse } from "@/lib/feedback";
+import { allowRequest, clientKey } from "@/lib/rate-limit";
 import { detectSevere } from "@/lib/safety";
 import { feedbackRequestSchema } from "@/lib/schemas";
 import { API_ERROR_CODES } from "@/lib/types";
@@ -21,6 +22,7 @@ const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   IMAGE_TOO_LARGE: "사진이 너무 커요. 더 작은 사진으로 다시 시도해 주세요.",
   AI_FAILED: "잠시 문제가 생겼어요. 다시 시도해 주세요.",
   AI_TIMEOUT: "시간이 오래 걸리고 있어요. 다시 시도해 주세요.",
+  RATE_LIMITED: "요청이 너무 많아요. 잠시 뒤에 다시 시도해 주세요.",
   SERVER_ERROR: "잠시 문제가 생겼어요. 다시 시도해 주세요.",
 };
 
@@ -42,6 +44,9 @@ export async function POST(request: Request): Promise<Response> {
     }
     // 우리 화면은 항상 JSON으로 보낸다. 다른 형식이면 사전 확인 없이 도착한 요청일 수 있어 거절한다.
     if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return errorResponse("INVALID_INPUT");
+
+    // 서버 쪽 횟수 제한: 사진을 읽기 전에 먼저 센다. (AI 비용이 드는 호출을 반복하지 못하게)
+    if (!allowRequest(clientKey(request.headers))) return errorResponse("RATE_LIMITED");
 
     // 크기: 선언된 크기를 먼저 보고, 실제로 읽은 크기도 다시 확인한다.
     const declaredBytes = Number(request.headers.get("content-length") ?? 0);

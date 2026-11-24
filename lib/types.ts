@@ -156,6 +156,8 @@ export const API_ERROR_CODES = {
   AI_FAILED: 502,
   /** 504: 서버 전체 마감(28초) 초과 */
   AI_TIMEOUT: 504,
+  /** 429: 서버 쪽 사용 횟수 제한 초과 (한 주소 또는 서비스 전체) */
+  RATE_LIMITED: 429,
   /** 500: 그 밖의 오류 */
   SERVER_ERROR: 500,
 } as const;
