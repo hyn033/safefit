@@ -23,7 +23,7 @@ export default function AppFooter() {
   return (
     <footer
       aria-label="안내"
-      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md border-t border-foreground/10 bg-card pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]"
+      className="fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] mx-auto w-[calc(100%-1.5rem)] max-w-[calc(28rem-1.5rem)] rounded-[28px] bg-card/85 px-1 py-1 shadow-[0_18px_40px_-14px_rgba(60,90,190,0.45)] ring-1 ring-white/60 backdrop-blur dark:ring-foreground/10"
     >
       <nav aria-label="주요 화면" className="grid grid-cols-3">
           {TABS.map((tab) => {

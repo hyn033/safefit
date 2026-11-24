@@ -7,6 +7,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Mascot from "@/components/Mascot";
 import { saveConsent } from "@/lib/storage";
 
 // Design Ref: §5.4 — 동의 화면 안내 문구. 핵심 문장은 굵게 보여 한눈에 읽히게 하고, 내용은 줄이지 않는다.
@@ -49,9 +50,14 @@ export default function ConsentPage() {
 
   return (
     <section aria-labelledby="consent-title" className="flex flex-col gap-5 pt-4">
-      <h1 id="consent-title" className="sf-title">
-        시작하기 전에 확인해 주세요
-      </h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 id="consent-title" className="sf-title">
+          시작하기 전에
+          <br />
+          확인해 주세요
+        </h1>
+        <Mascot size={72} />
+      </div>
 
       <ol className="flex flex-col gap-3">
         {NOTICES.map((notice, index) => (

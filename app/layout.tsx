@@ -36,15 +36,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-foreground/5">
-        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background bg-[radial-gradient(120%_40%_at_50%_0%,rgba(47,95,232,0.12),transparent)]">
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-2 bg-background/85 px-4 backdrop-blur">
+        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background bg-[radial-gradient(90%_30%_at_90%_0%,rgba(122,162,255,0.3),transparent),radial-gradient(80%_30%_at_0%_45%,rgba(190,170,255,0.16),transparent)]">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-2 bg-background/70 px-4 backdrop-blur">
             <span className="text-xl font-extrabold tracking-tight">
               세이프<span className="text-accent">핏</span>
             </span>
             <ProfileEditLink />
           </header>
 
-          <main className="flex-1 px-4 pt-1 pb-24">
+          <main className="flex-1 px-4 pt-1 pb-28">
             {/* Design Ref: §5.1 — 동의가 없으면 /consent로, 몸 정보가 없으면 /profile로 보낸다. */}
             <AccessGate>{children}</AccessGate>
           </main>

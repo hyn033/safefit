@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { COMMON_GUIDE_NOTES, EXERCISE_GUIDES, SLIDE_EXERCISE_IDS, getGuideImage } from "@/lib/exercises";
 import FeedbackResult, { PainNotice } from "@/components/FeedbackResult";
+import Mascot from "@/components/Mascot";
 import { BulbIcon, CameraIcon, ChatIcon, DumbbellIcon, SendIcon } from "@/components/Icons";
 import { toSevereResponse } from "@/lib/feedback";
 import { detectPain, detectSevere } from "@/lib/safety";
@@ -255,13 +256,16 @@ export default function Home() {
       ) : !confirmed ? (
         /* 1단계: 큰 운동 카드 하나를 옆으로 넘겨 보고, 누르면 그 운동으로 정한다. */
         <div className="flex flex-col gap-4 pt-1">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl leading-snug font-extrabold tracking-tight break-keep">
-              지금, 내 몸에 맞는
-              <br />
-              <span className="text-accent">안전한 운동</span>을 시작해요!
-            </h1>
-            <p className="text-sm text-foreground/60">옆으로 넘겨서 운동을 골라 보세요.</p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl leading-snug font-extrabold tracking-tight break-keep">
+                지금, 내 몸에 맞는
+                <br />
+                <span className="text-accent">안전한 운동</span>을 시작해요!
+              </h1>
+              <p className="text-sm text-foreground/60">옆으로 넘겨서 운동을 골라 보세요.</p>
+            </div>
+            <Mascot size={76} />
           </div>
           <div className="relative">
             <div

@@ -5,8 +5,8 @@
    - 글자: 화면 제목 20px 굵게(sf-title), 영역 제목 16px 굵게(sf-h2), 본문 14px, 보조 설명 12px
    - 모양: 입력·버튼·칩은 모두 둥근 모서리 12px(rounded-xl), 최소 높이 44px(손가락으로 누르기 쉽게) */
 :root {
-  --background: #f5f8ff;
-  --foreground: #172036;
+  --background: #eef2fc;
+  --foreground: #1d2540;
   --card: #ffffff;
   --accent: #2f5fe8;
   --accent-deep: #2149c4;
@@ -44,6 +44,17 @@ body {
   font-family: var(--font-geist-sans), "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
 }
 
+/* 마스코트가 살짝 위아래로 떠다니는 움직임. 움직임을 줄이는 설정이면 멈춘다. */
+@keyframes sf-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sf-bob {
+    animation: sf-bob 3s ease-in-out infinite;
+  }
+}
+
 @layer components {
   /* 글자 */
   .sf-title {
@@ -58,12 +69,12 @@ body {
 
   /* 카드: 화면의 묶음 하나 */
   .sf-card {
-    @apply rounded-3xl bg-card p-4 shadow-[0_8px_28px_-14px_rgba(33,73,196,0.35)] ring-1 ring-foreground/5;
+    @apply rounded-[28px] bg-card p-4 shadow-[0_18px_40px_-20px_rgba(60,90,190,0.4),0_2px_8px_-2px_rgba(60,90,190,0.08)] ring-1 ring-white/60 dark:ring-foreground/5;
   }
 
   /* 입력칸 (한 줄·여러 줄 공통) */
   .sf-input {
-    @apply min-h-11 w-full rounded-xl border border-foreground/15 bg-card px-3 text-base;
+    @apply min-h-11 w-full rounded-2xl border border-transparent bg-background px-3 text-base shadow-[inset_0_2px_6px_rgba(60,90,190,0.12)];
   }
   .sf-input:focus-visible {
     @apply outline-2 outline-offset-2 outline-accent;
@@ -74,15 +85,15 @@ body {
     @apply min-h-12 rounded-2xl bg-gradient-to-b from-accent to-accent-deep px-4 text-base font-semibold text-accent-foreground shadow-[0_8px_18px_-8px_rgba(33,73,196,0.7)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none;
   }
   .sf-btn-secondary {
-    @apply min-h-11 rounded-xl border border-accent/40 bg-card px-4 text-sm font-semibold text-accent transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+    @apply min-h-11 rounded-2xl bg-card px-4 text-sm font-semibold text-accent shadow-[0_8px_18px_-10px_rgba(60,90,190,0.45)] ring-1 ring-white/60 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:ring-foreground/10;
   }
 
   /* 눌러서 고르는 칩 (aria-checked 또는 aria-pressed가 true이면 강조색) */
   .sf-chip {
-    @apply min-h-11 rounded-xl border border-foreground/12 bg-card px-4 text-sm font-medium transition active:scale-[0.97];
+    @apply min-h-11 rounded-2xl bg-card px-4 text-sm font-medium shadow-[0_8px_18px_-10px_rgba(60,90,190,0.45)] ring-1 ring-white/60 transition active:scale-[0.97] dark:ring-foreground/10;
   }
   .sf-chip[aria-checked="true"],
   .sf-chip[aria-pressed="true"] {
-    @apply border-accent bg-accent text-accent-foreground shadow-[0_6px_14px_-8px_rgba(33,73,196,0.8)];
+    @apply bg-gradient-to-b from-accent to-accent-deep text-accent-foreground shadow-[0_10px_18px_-8px_rgba(33,73,196,0.8)] ring-0;
   }
 }
