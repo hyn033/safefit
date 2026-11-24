@@ -49,11 +49,14 @@ export default function ConsentPage() {
 
   return (
     <section aria-labelledby="consent-title" className="flex flex-col gap-5 pt-4">
-      <h1 id="consent-title" className="sf-title">
-        시작하기 전에
-        <br />
-        확인해 주세요
-      </h1>
+      <div className="flex flex-col gap-1">
+        <h1 id="consent-title" className="text-2xl leading-snug font-extrabold tracking-tight break-keep">
+          시작하기 전에
+          <br />
+          <span className="text-accent">꼭 확인</span>해 주세요
+        </h1>
+        <p className="text-sm text-foreground/60">내 정보가 어떻게 쓰이는지 알려 드려요.</p>
+      </div>
 
       <ol className="flex flex-col gap-3">
         {NOTICES.map((notice, index) => (
