@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 세이프핏 (SafeFit)
 
-## Getting Started
+**내 몸에 맞는 안전한 운동 자세를 알려 주는 AI 홈트레이닝 파트너** — 모바일 우선 웹 앱
 
-First, run the development server:
+기존 홈트 앱은 "평균적인 사람"을 기준으로 동작을 안내해서, 운동 초보자·과체중인·무릎·허리 등 부상 이력이 있는 사람은 자기 몸에 맞지 않는 동작을 억지로 따라 하다가 다치거나 포기하기 쉽습니다. 세이프핏은 **내 몸 정보(성별·키·체중·아픈 곳)와 내가 찍은 자세 사진**을 바탕으로, 옳은 자세와 어디가 다른지, 내 몸에는 어디까지가 안전한지를 쉬운 말로 알려 줍니다.
+
+> ⚠️ 참고용 자세 안내이며 **의료 진단이 아닙니다.** AI 분석 결과는 틀릴 수 있고, 통증이 있으면 즉시 운동을 멈추고 전문가와 상담하세요.
+
+## 어떻게 쓰나요
+
+1. **동의** — 사진·몸 정보가 AI 분석을 위해 미국의 OpenAI로 전송된다는 안내를 읽고 동의합니다.
+2. **몸 정보 입력** — 성별, 키, 체중, 아픈 곳을 입력합니다. (내 브라우저에만 저장됩니다)
+3. **운동 선택** — 스쿼트·런지·플랭크·브릿지 중에서 옆으로 넘겨 고릅니다.
+4. **안내 확인 후 사진 올리기** — 하는 법과 "찍을 순간"·카메라 위치를 보고 그 순간의 자세 사진을 올립니다. 궁금한 점도 적을 수 있습니다.
+5. **결과 확인** — 내 사진 위에 몸 선이 **초록(옳은 자세와 같음)·빨강(다름)** 으로 표시되고, 내 몸에 맞는 수정 방법과 질문에 대한 답을 받습니다.
+
+## 주요 기능
+
+- **몸 선 비교로 자세 판정**: 브라우저 안에서 MediaPipe 포즈 인식으로 내 사진과 옳은 자세 예시 사진의 몸 선(등·허벅지·정강이, 두 다리가 보이면 양쪽 다리)을 부위별로 비교합니다. 자세가 옳은지는 AI의 눈대중이 아니라 이 비교가 정합니다.
+- **내 몸에 맞는 안내**: AI(OpenAI)가 비교 결과를 쉬운 말로 풀고, 아픈 곳·관절 부담을 반영해 무리가 적은 수정 방법을 알려 줍니다. 체중을 이유로 비난하거나 진단·치료 표현을 쓰지 않도록 코드가 걸러냅니다.
+- **안전 규칙은 코드가 보장**: 통증 표현이 있으면 "멈추고 전문가 상담"을, 가슴 통증·어지러움·숨참 같은 심한 증상이면 자세 피드백 대신 "즉시 중단하고 병원·119 상담"을 AI와 상관없이 항상 표시합니다.
+- **개인정보 최소화**: 사진·메모·몸 정보는 서버에 저장하거나 기록하지 않습니다. 동의·몸 정보·오늘 사용 횟수만 내 브라우저(localStorage)에 저장하고, 로그인·회원가입은 없습니다.
+- **남용 방지**: 브라우저 하루 10회 + 서버 쪽 주소별·전체 요청 제한, 다른 사이트에서 온 요청 거절, 보안 헤더 적용.
+
+## 기술
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · zod · OpenAI API(`gpt-4o-mini`) · MediaPipe Pose Landmarker(브라우저 실행) · Vercel 배포
+
+## 직접 실행해 보기
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env   # 또는 .env 파일을 만들고 아래 값을 넣기
+npm run dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env`에는 서버에서만 읽는 키가 필요합니다. (브라우저에 노출되지 않도록 `NEXT_PUBLIC_`을 붙이지 않습니다)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+OPENAI_API_KEY=여기에_본인_키
+# OPENAI_MODEL=gpt-4o-mini   (선택)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint    # 코드 검사
+npm run build   # 배포용 빌드
+```
 
-## Learn More
+## 문서
 
-To learn more about Next.js, take a look at the following resources:
+| 문서 | 내용 |
+|---|---|
+| [PRD.md](PRD.md) | 서비스 기획서 (문제 정의, 목표, 기능, 범위, 보안·개인정보) |
+| [PLAN.md](PLAN.md) | 계획서 (작업 순서, 진행 상태, 위험과 대응) |
+| [DESIGN.md](DESIGN.md) | 설계서 (구조, 데이터 모양, 서버 API, 화면, 테스트 계획) |
+| [CHECK.md](CHECK.md) | 점검 결과 (보안 점검 포함) |
+| [TEST.md](TEST.md) | 테스트 기록 |
+| [CLAUDE.md](CLAUDE.md) | 프로젝트 작업 규칙 |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 알려진 한계
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 몸 선 비교의 기준 값은 초안이며, 사람이 직접 찍은 사진으로 더 조정해야 합니다.
+- 서버 쪽 요청 제한은 서버 한 대 안에서만 세므로, 배포 후 Vercel Firewall 규칙과 OpenAI 사용 한도를 함께 걸어야 합니다.
+- 개인정보 처리 안내와 동의 문구는 초안입니다. 정식 공개 전 운영자 문의처 기재와 법률 검토가 필요합니다.
