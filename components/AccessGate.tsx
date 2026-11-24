@@ -1,7 +1,7 @@
 "use client";
 
 // Design Ref: §5.1, §7 — 어느 화면에서 시작하든 아래 순서를 지키도록 화면 이동을 맡는다.
-//   1) 동의가 없으면 /consent로 보낸다. (동의한 사람이 /consent에 오면 홈 /으로 보낸다.)
+//   1) 동의가 없으면 시작 화면 /welcome으로 보낸다. (시작하기 → /consent. 동의한 사람이 /welcome·/consent에 오면 홈 /으로 보낸다.)
 //   2) 동의했지만 몸 정보가 없으면 /profile로 보낸다. (몸 정보가 있으면 /profile은 "수정" 화면이 된다.)
 // 동의·몸 정보는 브라우저 저장소에만 있으므로 화면이 그려진 뒤(브라우저에서)에 확인한다.
 // 확인하는 동안과 이동하는 동안에는 내용을 숨겨서 화면이 깜빡이지 않게 한다.
@@ -17,6 +17,7 @@ function subscribe(onChange: () => void) {
   return () => window.removeEventListener("storage", onChange);
 }
 
+const WELCOME_PATH = "/welcome";
 const CONSENT_PATH = "/consent";
 const PROFILE_PATH = "/profile";
 
@@ -31,8 +32,9 @@ function getRedirectPath(
   // 개인정보 처리 안내는 동의 전에도 볼 수 있어야 한다.
   if (pathname === "/privacy") return null;
 
-  if (!consented) return pathname === CONSENT_PATH ? null : CONSENT_PATH;
-  if (pathname === CONSENT_PATH) return "/";
+  // 동의 전에는 시작 화면(처음 접속)과 동의 화면만 볼 수 있다. 동의한 사람은 시작 화면을 건너뛴다.
+  if (!consented) return pathname === CONSENT_PATH || pathname === WELCOME_PATH ? null : WELCOME_PATH;
+  if (pathname === CONSENT_PATH || pathname === WELCOME_PATH) return "/";
   if (!profileSaved && pathname !== PROFILE_PATH) return PROFILE_PATH;
   return null;
 }
