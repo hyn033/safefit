@@ -34,10 +34,10 @@ export default function AppFooter() {
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium ${
-                  active ? "text-accent" : "text-foreground/60"
+                  active ? "text-accent" : "text-foreground/55"
                 }`}
               >
-                {tab.icon}
+                <span className={`flex h-7 w-14 items-center justify-center rounded-full transition ${active ? "bg-accent/12" : ""}`}>{tab.icon}</span>
                 {tab.label}
               </Link>
             );

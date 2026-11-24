@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AccessGate from "@/components/AccessGate";
 import AppFooter from "@/components/AppFooter";
-import Logo from "@/components/Logo";
 import ProfileEditLink from "@/components/ProfileEditLink";
 
 const geistSans = Geist({
@@ -37,13 +36,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-foreground/5">
-        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-2 bg-background px-4">
-            <Logo size={40} />
-            <div className="flex flex-col leading-tight">
-              <span className="text-xl font-bold">세이프핏</span>
-              <span className="text-sm text-foreground/60">SafeFit</span>
-            </div>
+        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background bg-[radial-gradient(120%_40%_at_50%_0%,rgba(47,95,232,0.12),transparent)]">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-2 bg-background/85 px-4 backdrop-blur">
+            <span className="text-xl font-extrabold tracking-tight">
+              세이프<span className="text-accent">핏</span>
+            </span>
             <ProfileEditLink />
           </header>
 

@@ -255,11 +255,14 @@ export default function Home() {
       ) : !confirmed ? (
         /* 1단계: 큰 운동 카드 하나를 옆으로 넘겨 보고, 누르면 그 운동으로 정한다. */
         <div className="flex flex-col gap-4 pt-1">
-          <h1 className="text-xl leading-snug font-bold break-keep">
-            지금, 내 몸에 맞는
-            <br />
-            <span className="text-accent">안전한 운동</span>을 시작해요!
-          </h1>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl leading-snug font-extrabold tracking-tight break-keep">
+              지금, 내 몸에 맞는
+              <br />
+              <span className="text-accent">안전한 운동</span>을 시작해요!
+            </h1>
+            <p className="text-sm text-foreground/60">옆으로 넘겨서 운동을 골라 보세요.</p>
+          </div>
           <div className="relative">
             <div
               ref={slideRef}
@@ -272,21 +275,27 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => selectExercise(id)}
-                    className="sf-card flex w-full flex-col items-center gap-3 p-5 shadow-md"
+                    className="sf-card flex w-full flex-col items-center gap-3 p-4 transition active:scale-[0.99]"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- 작은 SVG 그림이라 최적화가 필요 없다 */}
-                    <img src={getGuideImage(EXERCISE_GUIDES[id], gender)} alt="" className="h-[28dvh] max-h-60 w-full rounded-2xl bg-accent/10 object-contain" />
+                    <img src={getGuideImage(EXERCISE_GUIDES[id], gender)} alt="" className="h-[28dvh] max-h-60 w-full rounded-2xl bg-gradient-to-b from-accent/12 to-accent/5 object-contain" />
                     <span className="text-2xl font-bold">{EXERCISE_GUIDES[id].name}</span>
                     <span className="sf-btn flex w-full items-center justify-center">선택하기</span>
                   </button>
                 </div>
               ))}
             </div>
+            {/* 현재 몇 번째 운동인지 보여 주는 점 */}
+            <div aria-hidden="true" className="mt-3 flex justify-center gap-1.5">
+              {SLIDE_EXERCISE_IDS.map((id, index) => (
+                <span key={id} className={`h-1.5 rounded-full transition-all ${index === slideIndex ? "w-5 bg-accent" : "w-1.5 bg-foreground/20"}`} />
+              ))}
+            </div>
             {/* 좌우 화살표 (손가락으로 밀어도 되고, 마우스는 화살표를 누른다) */}
             <button type="button" onClick={() => moveSlide(-1)} aria-label="이전 운동" disabled={slideIndex === 0}
-              className="absolute top-1/3 left-0 size-11 rounded-full bg-background/90 text-xl shadow disabled:hidden">‹</button>
+              className="absolute top-1/3 left-1 size-10 rounded-full bg-card/95 text-xl shadow-md ring-1 ring-foreground/10 disabled:hidden">‹</button>
             <button type="button" onClick={() => moveSlide(1)} aria-label="다음 운동" disabled={slideIndex === SLIDE_EXERCISE_IDS.length - 1}
-              className="absolute top-1/3 right-0 size-11 rounded-full bg-background/90 text-xl shadow disabled:hidden">›</button>
+              className="absolute top-1/3 right-1 size-10 rounded-full bg-card/95 text-xl shadow-md ring-1 ring-foreground/10 disabled:hidden">›</button>
           </div>
         </div>
       ) : (
