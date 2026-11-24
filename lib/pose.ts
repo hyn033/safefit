@@ -94,7 +94,14 @@ export interface PoseAnalysis {
   paths: PartPaths;
   /** 부위별 마디의 기울어진 각도(도). 사진의 가로·세로 비율을 반영한 픽셀 좌표 기준이고 팔은 마디가 2개다. */
   angles: Partial<Record<OverlayPart, number[]>>;
+  /** 반대쪽 다리(허벅지·정강이). 두 다리가 모두 뚜렷하게 보이고 서로 다른 위치일 때만 있다. */
+  other?: { paths: PartPaths; angles: Partial<Record<OverlayPart, number[]>> };
 }
+
+/** 반대쪽 다리는 더 확실히 보일 때만 쓴다. (가려진 다리를 추측해 그리지 않게) */
+const OTHER_LEG_MIN_VISIBILITY = 0.5;
+/** 반대쪽 다리가 이 거리(사진 크기의 비율)보다 가깝게 겹쳐 있으면 같은 다리로 보고 따로 그리지 않는다. */
+const OTHER_LEG_MIN_DISTANCE = 0.02;
 
 /** 같은 사진을 다시 분석하지 않도록 결과를 기억해 둔다. (정석 사진, 요청 전 비교, 결과 화면의 선이 같은 값을 쓴다) */
 const analysisCache = new Map<string, PoseAnalysis | null>();
@@ -139,6 +146,27 @@ export async function analyzePose(image: HTMLImageElement): Promise<PoseAnalysis
   }
 
   const analysis: PoseAnalysis = { paths, angles };
+
+  // 반대쪽 다리: 엉덩이·무릎·발목이 모두 뚜렷하게 보이고 이쪽 다리와 겹치지 않을 때만 따로 잡는다.
+  const otherSide = side === LEFT ? RIGHT : LEFT;
+  const otherJoints = (["hip", "knee", "ankle"] as const).map((joint) => pose[otherSide[joint]]);
+  const mainJoints = (["hip", "knee", "ankle"] as const).map((joint) => pose[side[joint]]);
+  if (otherJoints.every((l) => l && (l.visibility ?? 0) >= OTHER_LEG_MIN_VISIBILITY)) {
+    const apart = otherJoints.some((l, index) => Math.hypot(l.x - mainJoints[index].x, l.y - mainJoints[index].y) > OTHER_LEG_MIN_DISTANCE);
+    if (apart) {
+      const [hip, knee, ankle] = otherJoints.map((l): Point => [l.x, l.y]);
+      const toPixels = (p: Point): Point => [p[0] * image.naturalWidth, p[1] * image.naturalHeight];
+      const degrees = (from: Point, to: Point) => {
+        const [a, b] = [toPixels(from), toPixels(to)];
+        return (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+      };
+      analysis.other = {
+        paths: { thigh: [hip, knee], shin: [knee, ankle] },
+        angles: { thigh: [degrees(hip, knee)], shin: [degrees(knee, ankle)] },
+      };
+    }
+  }
+
   analysisCache.set(key, analysis);
   return analysis;
 }
@@ -219,7 +247,53 @@ export function compareToStandard(user: PoseAnalysis | null, standard: PoseAnaly
     }
   }
 
-  return { parts: common.map((part, index) => ({ part, deltaDeg: Math.min(180, Math.round(gaps[index])) })) };
+  // 반대쪽 다리도 보이면 그 다리도 같은 방법으로 비교한다. (옳은 자세 사진에서도 반대쪽 다리가 보이면 그것과, 아니면 보이는 다리와 비교)
+  const others = compareOtherLeg(user, standard, flip, common, mineAngle, refAngle);
+
+  return {
+    parts: common.map((part, index) => ({
+      part,
+      deltaDeg: Math.min(180, Math.round(gaps[index])),
+      ...(others[part] !== undefined ? { otherDeltaDeg: Math.min(180, Math.round(others[part] as number)) } : {}),
+    })),
+  };
+}
+
+/** 반대쪽 다리의 허벅지·정강이 각도 차이. 관절(엉덩이·무릎)이 꺾인 정도도 함께 본다. 반대쪽 다리가 안 보이면 빈 값 */
+function compareOtherLeg(
+  user: PoseAnalysis,
+  standard: PoseAnalysis,
+  flip: boolean,
+  common: OverlayPart[],
+  mineAngle: (part: OverlayPart, flip: boolean) => number,
+  refAngle: (part: OverlayPart) => number,
+): Partial<Record<OverlayPart, number>> {
+  const result: Partial<Record<OverlayPart, number>> = {};
+  const mineOther = user.other?.angles;
+  if (!mineOther?.thigh || !mineOther.shin || !common.includes("thigh") || !common.includes("shin")) return result;
+  const refOther = standard.other?.angles;
+  const refThigh = refOther?.thigh?.[0] ?? refAngle("thigh");
+  const refShin = refOther?.shin?.[0] ?? refAngle("shin");
+  const myThigh = flip ? mirror(mineOther.thigh[0]) : mineOther.thigh[0];
+  const myShin = flip ? mirror(mineOther.shin[0]) : mineOther.shin[0];
+
+  let thigh = angleGap(myThigh, refThigh);
+  let shin = angleGap(myShin, refShin);
+
+  // 무릎이 꺾인 정도 (허벅지–정강이)
+  const kneeBend = Math.abs(wrap(wrap(myShin - myThigh) - wrap(refShin - refThigh)));
+  if (kneeBend > BEND_SAME_DEG) {
+    thigh = Math.max(thigh, SAME_WITHIN_DEG.thigh + 1 + (kneeBend - BEND_SAME_DEG));
+    shin = Math.max(shin, SAME_WITHIN_DEG.shin + 1 + (kneeBend - BEND_SAME_DEG));
+  }
+  // 엉덩이가 꺾인 정도 (등–허벅지): 등은 이쪽 몸의 등을 그대로 쓴다.
+  if (common.includes("back")) {
+    const hipBend = Math.abs(wrap(wrap(myThigh - mineAngle("back", flip)) - wrap(refThigh - refAngle("back"))));
+    if (hipBend > BEND_SAME_DEG) thigh = Math.max(thigh, SAME_WITHIN_DEG.thigh + 1 + (hipBend - BEND_SAME_DEG));
+  }
+  result.thigh = thigh;
+  result.shin = shin;
+  return result;
 }
 
 

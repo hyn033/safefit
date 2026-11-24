@@ -84,7 +84,12 @@ export interface FeedbackRequest {
  * 같은지 다른지의 판정과 초록·빨강은 이 값을 보고 코드(lib/form.ts)가 정한다.
  */
 export interface PoseComparison {
-  parts: { part: OverlayPart; deltaDeg: number }[];
+  parts: {
+    part: OverlayPart;
+    deltaDeg: number;
+    /** 허벅지·정강이에서, 반대쪽 다리도 보일 때 그 다리의 각도 차이(도). 한쪽만 보이면 없음 */
+    otherDeltaDeg?: number;
+  }[];
 }
 
 /** 응답 상태: 정상 / 다시 촬영 / 운동·사진 불일치 확인 / 심한 증상 */
@@ -104,6 +109,8 @@ export type OverlayPart = (typeof OVERLAY_PARTS)[number];
 export interface OverlayItem {
   part: OverlayPart;
   kind: "good" | "fix";
+  /** 허벅지·정강이에서 반대쪽 다리도 비교했을 때 그 다리의 결과 (한쪽만 보이면 없음) */
+  otherKind?: "good" | "fix";
 }
 
 /** 코드가 항상 붙이는 안내 (AI 답변과 무관하게 표시한다) */

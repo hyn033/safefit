@@ -61,6 +61,8 @@ function Section({ title, items, numbered = false }: { title: string; items?: st
 function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayItem[] }) {
   // 내 몸 선: undefined = 찾는 중, null = 찾지 못함
   const [paths, setPaths] = useState<PartPaths | null | undefined>(undefined);
+  // 반대쪽 다리 선 (두 다리가 모두 보일 때만 있다)
+  const [otherPaths, setOtherPaths] = useState<PartPaths | undefined>(undefined);
 
   async function handleLoad(event: SyntheticEvent<HTMLImageElement>) {
     if (items.length === 0) {
@@ -68,16 +70,19 @@ function PhotoOverlay({ photoUrl, items }: { photoUrl: string; items: OverlayIte
       return;
     }
     try {
-      setPaths((await analyzePose(event.currentTarget))?.paths ?? null);
+      const analysis = await analyzePose(event.currentTarget);
+      setPaths(analysis?.paths ?? null);
+      setOtherPaths(analysis?.other?.paths);
     } catch {
       setPaths(null);
     }
   }
 
   const segments = items.flatMap((item) => {
-    const points = paths?.[item.part];
-    if (!points) return [];
-    return points.slice(1).map((end, index) => ({ from: points[index], to: end, kind: item.kind }));
+    const lines = [{ points: paths?.[item.part], kind: item.kind }];
+    // 반대쪽 다리도 비교했다면(otherKind가 있으면) 그 다리도 자기 결과 색으로 그린다.
+    if (item.otherKind) lines.push({ points: otherPaths?.[item.part], kind: item.otherKind });
+    return lines.flatMap(({ points, kind }) => (points ? points.slice(1).map((end, index) => ({ from: points[index], to: end, kind })) : []));
   });
   const hasItems = items.length > 0;
 
@@ -266,7 +271,6 @@ export default function FeedbackResult({ result, guide, onConfirmExercise, onRes
               <p className="text-sm leading-relaxed">{result.memoAnswer}</p>
             </section>
           )}
-          <Section title="옳은 자세와 다른 점" items={result.differences} />
           <Section title="무리가 가는 부분" items={result.problemParts} />
         </>
       )}

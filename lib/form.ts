@@ -39,12 +39,20 @@ export interface FormJudgement {
  */
 export function judgeComparison(comparison: PoseComparison | undefined): FormJudgement | null {
   if (!comparison || comparison.parts.length === 0) return null;
-  const different = comparison.parts.filter((item) => item.deltaDeg > SAME_WITHIN_DEG[item.part]);
+  // 두 다리가 모두 보이면 양쪽을 비교한다. 한쪽 다리라도 다르면 그 부위(허벅지·정강이)는 다른 것으로 본다.
+  const worst = (item: PoseComparison["parts"][number]) => Math.max(item.deltaDeg, item.otherDeltaDeg ?? 0);
+  const different = comparison.parts.filter((item) => worst(item) > SAME_WITHIN_DEG[item.part]);
   const verdict: Verdict =
-    different.length === 0 ? "similar" : different.length >= 2 || different.some((item) => item.deltaDeg > FAR_OVER_DEG) ? "large" : "slight";
+    different.length === 0 ? "similar" : different.length >= 2 || different.some((item) => worst(item) > FAR_OVER_DEG) ? "large" : "slight";
   return {
     verdict,
-    parts: comparison.parts.map((item): OverlayItem => ({ part: item.part, kind: item.deltaDeg > SAME_WITHIN_DEG[item.part] ? "fix" : "good" })),
+    parts: comparison.parts.map(
+      (item): OverlayItem => ({
+        part: item.part,
+        kind: item.deltaDeg > SAME_WITHIN_DEG[item.part] ? "fix" : "good",
+        ...(item.otherDeltaDeg !== undefined ? { otherKind: item.otherDeltaDeg > SAME_WITHIN_DEG[item.part] ? ("fix" as const) : ("good" as const) } : {}),
+      }),
+    ),
     issues: different.map((item) => ISSUE_TEXTS[item.part]),
   };
 }

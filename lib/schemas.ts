@@ -48,7 +48,16 @@ export const feedbackRequestSchema = z
     exerciseConfirmed: z.boolean().optional(),
     comparison: z
       .object({
-        parts: z.array(z.object({ part: z.enum(OVERLAY_PARTS), deltaDeg: z.number().min(0).max(180) })).min(1).max(OVERLAY_PARTS.length),
+        parts: z
+          .array(
+            z.object({
+              part: z.enum(OVERLAY_PARTS),
+              deltaDeg: z.number().min(0).max(180),
+              otherDeltaDeg: z.number().min(0).max(180).optional(),
+            }),
+          )
+          .min(1)
+          .max(OVERLAY_PARTS.length),
       })
       .optional(),
   })
