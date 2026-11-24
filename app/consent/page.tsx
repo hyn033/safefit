@@ -50,16 +50,17 @@ export default function ConsentPage() {
 
   return (
     <section aria-labelledby="consent-title" className="flex flex-col gap-5 pt-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 id="consent-title" className="sf-title">
-          시작하기 전에
-          <br />
-          확인해 주세요
-        </h1>
-        <Mascot size={72} />
-      </div>
+      <h1 id="consent-title" className="sf-title">
+        시작하기 전에
+        <br />
+        확인해 주세요
+      </h1>
 
-      <ol className="flex flex-col gap-3">
+      <ol className="relative mt-6 flex flex-col gap-3">
+        {/* 마스코트가 첫 카드 윗면에 걸터앉은 모양 */}
+        <li aria-hidden="true" className="pointer-events-none absolute right-6 -top-[58px] z-10 list-none">
+          <Mascot size={64} />
+        </li>
         {NOTICES.map((notice, index) => (
           <li key={notice.title} className="sf-card flex gap-3">
             <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-accent to-accent-deep text-sm font-bold text-accent-foreground shadow-[0_6px_12px_-6px_rgba(33,73,196,0.8)]">

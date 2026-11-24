@@ -256,23 +256,22 @@ export default function Home() {
       ) : !confirmed ? (
         /* 1단계: 큰 운동 카드 하나를 옆으로 넘겨 보고, 누르면 그 운동으로 정한다. */
         <div className="flex flex-col gap-4 pt-1">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-2xl leading-snug font-extrabold tracking-tight break-keep">
-                지금, 내 몸에 맞는
-                <br />
-                <span className="text-accent">안전한 운동</span>을 시작해요!
-              </h1>
-              <p className="text-sm text-foreground/60">옆으로 넘겨서 운동을 골라 보세요.</p>
-            </div>
-            <Mascot size={76} />
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl leading-snug font-extrabold tracking-tight break-keep">
+              지금, 내 몸에 맞는
+              <br />
+              <span className="text-accent">안전한 운동</span>을 시작해요!
+            </h1>
+            <p className="text-sm text-foreground/60">옆으로 넘겨서 운동을 골라 보세요.</p>
           </div>
           <div className="relative">
+            {/* 마스코트가 카드 윗면에 걸터앉은 모양 (카드 위로 살짝 솟아 보인다) */}
+            <Mascot size={64} className="pointer-events-none absolute right-8 -top-[54px] z-10" />
             <div
               ref={slideRef}
               onScroll={handleSlideScroll}
               aria-label="운동 목록"
-              className="-mx-4 flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="-mx-4 -mb-3 flex snap-x pb-6 snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               {SLIDE_EXERCISE_IDS.map((id) => (
                 <div key={id} className="w-full shrink-0 snap-center px-4">
